@@ -4,6 +4,8 @@
 [![GitHub stars](https://img.shields.io/github/stars/LucasSantana-Dev/shelfmark?style=flat)](https://github.com/LucasSantana-Dev/shelfmark/stargazers)
 [![MCP](https://img.shields.io/badge/MCP-server-6b5ce7)](https://modelcontextprotocol.io)
 
+![shelfmark: local hybrid retrieval for agent memory and codebases](.github/shelfmark-card.png)
+
 Local hybrid retrieval for agent memory and codebases. One SQLite file, no
 services, no cloud. BM25 + dense embeddings fused with Reciprocal Rank Fusion,
 an optional cross-encoder reranker, and an MCP server so coding agents
