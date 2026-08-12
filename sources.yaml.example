@@ -1,0 +1,24 @@
+# shelfmark corpus configuration.
+# Copy to $RAG_HOME/sources.yaml (default ~/.shelfmark/sources.yaml) and edit.
+# ~ and $VARS are expanded in every path.
+
+# Code repos: indexed for source code (py/ts/js/sh), docs/**/*.md, README.md,
+# CHANGELOG.md, docs/specs/**, docs/roadmap.md, and the last 180 days of git
+# commit messages. Auto-scoping at query time keys off these paths.
+repos:
+  - ~/dev/my-main-project
+  - ~/dev/another-repo
+
+# Markdown corpora: type is a free label you filter on at query time
+# (--scope <type> / scope_types). Globs support * and **.
+sources:
+  - type: memory
+    glob: ~/notes/memory/**/*.md
+  - type: standards
+    glob: ~/notes/standards/*.md
+  - type: plans
+    glob: ~/notes/plans/*.md
+
+# Loose scripts outside any repo, indexed as source_type=workstation-code.
+code_globs:
+  - ~/scripts/*.sh

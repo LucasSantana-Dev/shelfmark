@@ -1,0 +1,10 @@
+{"query": "camelCase and snake_case sub-token splitting for search", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "double loading of multi gigabyte models prevented by a lock", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "symbol definition boost when query mentions an identifier", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "synthetic purpose chunk from note frontmatter name and description", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "deduplicate files reached through symlinks during indexing", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "where do the curated repo list and markdown globs come from", "expect_path_contains": ["config.py", "build.py"], "expect_scope": "code"}
+{"query": "python ast walk collecting function definitions and calls", "expect_path_contains": "symbols.py", "expect_scope": "code"}
+{"query": "clamp the top parameter to sane bounds without raising", "expect_path_contains": "mcp_server.py", "expect_scope": "code"}
+{"query": "exclude symbol lookup questions from retrieval scoring", "expect_path_contains": "eval/run.py", "expect_scope": "code"}
+{"query": "reindex a file incrementally right after it is written", "expect_path_contains": "reindex-hook.sh", "expect_scope": "code"}

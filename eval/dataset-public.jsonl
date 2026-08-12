@@ -1,0 +1,42 @@
+{"query": "how are BM25 and cosine scores combined into one ranking", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "reciprocal rank fusion constant value", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "why does memory scope never get reranked", "expect_path_contains": ["retrieval.py", "mcp_server.py"], "expect_scope": "code"}
+{"query": "auto rerank trigger for weak ambiguous queries threshold margin", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "what happens when the reranker model is not cached on this machine", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "corpus cache invalidated when the sqlite index file changes", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "recency prior freshness tie-break for memory chunks", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "fallback when sentence transformer raises embedding_dimension TypeError", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "recover when the server working directory was deleted", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "detect which configured repo the current working directory belongs to", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "query telemetry logging to a local sqlite table", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
+{"query": "E5 passage prefix added at embed time", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "contextual chunk prefix with source type repo file symbol", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "one concise card instead of full chunks for ephemeral notes", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "superseded notes with valid_to removed from the index", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "corrupt sqlite index detected and rebuilt fresh", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "vacuum backup snapshots keep newest three", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "git log commit messages indexed as chunks", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "which directories are excluded from code indexing", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "skip repos that have a knowledge graph when embedding code", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "yaml frontmatter parsed best effort returning empty dict", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "classify a file path into a source type label", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "environment variable for the data directory and index location", "expect_path_contains": "config.py", "expect_scope": "code"}
+{"query": "malformed sources yaml raises a clear error", "expect_path_contains": "config.py", "expect_scope": "code"}
+{"query": "split markdown into chunks by heading", "expect_path_contains": "chunkers.py", "expect_scope": "code"}
+{"query": "detect programming language from file extension", "expect_path_contains": "chunkers.py", "expect_scope": "code"}
+{"query": "typescript regex symbol extraction exports classes interfaces", "expect_path_contains": "symbols.py", "expect_scope": "code"}
+{"query": "populate call graph tables from indexed chunks", "expect_path_contains": "populate_symbols.py", "expect_scope": "code"}
+{"query": "index agent session transcripts from jsonl files", "expect_path_contains": "session_chunker.py", "expect_scope": "code"}
+{"query": "MCP server prewarm so the first query is not slow", "expect_path_contains": "mcp_server.py", "expect_scope": "code"}
+{"query": "json rpc tools list and tools call dispatch loop", "expect_path_contains": "mcp_server.py", "expect_scope": "code"}
+{"query": "search knowledge tool searches all repos without cwd scoping", "expect_path_contains": "mcp_server.py", "expect_scope": "code"}
+{"query": "truncate per hit text unless full output requested", "expect_path_contains": "query.py", "expect_scope": "code"}
+{"query": "compute mean reciprocal rank and hit at k metrics", "expect_path_contains": "eval/run.py", "expect_scope": "code"}
+{"query": "fail the gate when a metric regresses more than five points", "expect_path_contains": "eval/check.sh", "expect_scope": "code"}
+{"query": "sweep parameter combinations and compare eval results", "expect_path_contains": "eval/sweep.py", "expect_scope": "code"}
+{"query": "detect stale eval cases whose expected files left the index", "expect_path_contains": "eval/case_quality.py", "expect_scope": "code"}
+{"query": "inject top retrieval hits into the agent prompt automatically", "expect_path_contains": "autorecall-hook.sh", "expect_scope": "code"}
+{"query": "nightly full rebuild with regression alert webhook", "expect_path_contains": "rag-nightly-rebuild.sh", "expect_scope": "code"}
+{"query": "what is shelfmark and why does it exist", "expect_path_contains": "README.md", "expect_scope": "repo-readme"}
+{"query": "how do I point the indexer at my own repos and notes", "expect_path_contains": ["README.md", "sources.yaml.example"], "expect_scope": "repo-readme"}
+{"query": "how to connect this to Claude Code as an MCP server", "expect_path_contains": "README.md", "expect_scope": "repo-readme"}

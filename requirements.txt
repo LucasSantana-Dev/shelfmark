@@ -1,0 +1,4 @@
+numpy
+PyYAML
+rank-bm25
+sentence-transformers
