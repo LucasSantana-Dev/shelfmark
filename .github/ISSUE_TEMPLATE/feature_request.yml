@@ -1,0 +1,22 @@
+name: Feature request
+description: Propose an improvement or new capability
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What failure mode or friction does this solve? Concrete beats hypothetical.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: measurement
+    attributes:
+      label: How would we measure it?
+      description: If this touches retrieval quality, how should the eval harness capture the improvement? (See eval/ and BENCHMARK.md.)
