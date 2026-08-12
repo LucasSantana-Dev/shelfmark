@@ -116,7 +116,7 @@ regression gate.
 | `sources` | arbitrary markdown globs, each under a free `type` label you filter on at query time |
 | `code_globs` | loose scripts outside any repo |
 
-Incremental reindex (`build.py --incremental <files>`) keeps writes cheap;
+Incremental reindex (`indexer.py --incremental <files>`) keeps writes cheap;
 `session_chunker.py` can additionally index agent session transcripts.
 
 ## Evaluation
@@ -131,7 +131,7 @@ This repo ships a public, reproducible dataset (`eval/dataset-public.jsonl`)
 whose queries target this repository's own code and docs:
 
 ```bash
-venv/bin/python build.py                 # index this repo (sources.yaml.example works as-is)
+venv/bin/python indexer.py                 # index this repo (sources.yaml.example works as-is)
 venv/bin/python eval/run.py --dataset eval/dataset-public.jsonl --label mine
 ```
 

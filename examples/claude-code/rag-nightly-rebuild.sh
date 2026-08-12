@@ -24,12 +24,12 @@ notify() {
 log "=== nightly full rebuild start ==="
 
 # 1. Full rebuild (not incremental)
-if ! "$PY" "$SHELFMARK_DIR/build.py" >> "$LOG" 2>&1; then
-    log "ERROR: build.py exited non-zero"
-    notify "shelfmark rebuild FAILED" "build.py exited non-zero — check nightly-rebuild.log" "15158332"
+if ! "$PY" "$SHELFMARK_DIR/indexer.py" >> "$LOG" 2>&1; then
+    log "ERROR: indexer.py exited non-zero"
+    notify "shelfmark rebuild FAILED" "indexer.py exited non-zero — check nightly-rebuild.log" "15158332"
     exit 1
 fi
-log "build.py complete"
+log "indexer.py complete"
 
 # 2. Eval gate (requires an eval dataset + frozen baseline for YOUR corpus)
 if [ -f "$BASELINE" ]; then

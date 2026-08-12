@@ -5,7 +5,7 @@ Runs the matrix {dataset-current, holdout} for a labeled experiment, extracts
 overall + per-scope Hit@5, compares to the stored baseline, applies the
 KEEP/REVERT decision rule, and appends one row to eval/RESULTS.md (the ledger).
 
-Every lever lives behind an env flag (retrieval.py) or a build flag (build.py),
+Every lever lives behind an env flag (retrieval.py) or a build flag (indexer.py),
 so each experiment is exactly one command and fully reversible — nothing ships
 until a row reads KEEP. Adding a future lever = add the flag + one sweep row.
 

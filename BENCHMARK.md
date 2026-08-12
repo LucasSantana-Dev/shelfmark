@@ -9,7 +9,7 @@
 ```bash
 python3 -m venv venv && venv/bin/pip install -r requirements.txt
 mkdir -p ~/.shelfmark && printf 'repos:\n  - %s\n' "$(pwd)" > ~/.shelfmark/sources.yaml
-venv/bin/python build.py
+venv/bin/python indexer.py
 RAG_QLOG=off venv/bin/python eval/run.py --dataset eval/dataset-public.jsonl --label train
 RAG_QLOG=off venv/bin/python eval/run.py --dataset eval/holdout-public.jsonl --label holdout
 ```

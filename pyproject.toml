@@ -36,13 +36,13 @@ Repository = "https://github.com/LucasSantana-Dev/shelfmark"
 Benchmark = "https://github.com/LucasSantana-Dev/shelfmark/blob/main/BENCHMARK.md"
 
 [project.scripts]
-shelfmark-build = "build:main"
+shelfmark-build = "indexer:main"
 shelfmark-query = "query:main"
 shelfmark-mcp = "mcp_server:main"
 
 [tool.setuptools]
 py-modules = [
-    "build",
+    "indexer",
     "chunkers",
     "config",
     "diff_pack",

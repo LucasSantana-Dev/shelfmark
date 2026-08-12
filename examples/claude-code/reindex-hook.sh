@@ -32,7 +32,7 @@ case "$FILE" in
   "$HOME"/notes/plans/*.md|\
   "$HOME"/notes/standards/*.md)
     TRANSFORMERS_VERBOSITY=error HF_HUB_VERBOSITY=error \
-    "$RAG_PY" "$SHELFMARK_DIR/build.py" --incremental "$FILE" \
+    "$RAG_PY" "$SHELFMARK_DIR/indexer.py" --incremental "$FILE" \
       >>"$LOG" 2>&1 &
     ;;
 esac

@@ -46,7 +46,7 @@ PICKED=$(printf "%s\n" "$DRIFT_FILES" | head -"$MAX_FILES")
 {
   echo "[$(date '+%Y-%m-%dT%H:%M:%S')] drift=$COUNT picked=$(echo "$PICKED" | wc -l | tr -d ' ') threshold=$THRESHOLD"
   # shellcheck disable=SC2086
-  echo "$PICKED" | xargs "$PY" "$SHELFMARK_DIR/build.py" --incremental
+  echo "$PICKED" | xargs "$PY" "$SHELFMARK_DIR/indexer.py" --incremental
   # Eval gate: after a drift reindex, verify retrieval quality against the
   # golden baseline (if one exists for your corpus).
   if [ -x "$SHELFMARK_DIR/eval/check.sh" ] && [ -f "$SHELFMARK_DIR/eval/baseline-golden.json" ]; then

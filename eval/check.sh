@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # eval/check.sh — run the eval suite and compare against baseline.json.
 # Exit 0 if delta within tolerance, 1 if any metric regresses by >5pp.
-# Designed to be called manually or chained from build.py after full reindex.
+# Designed to be called manually or chained from indexer.py after full reindex.
 set -uo pipefail
 
 EVAL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

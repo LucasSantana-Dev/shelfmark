@@ -6,8 +6,8 @@ source-code dirs for the configured repo whitelist. Language-aware chunkers
 split by symbol where possible. See config.py / sources.yaml.example.
 
 Usage:
-  build.py                                           # full rebuild
-  build.py --incremental <file> [...files]           # reindex specific files
+  indexer.py                                           # full rebuild
+  indexer.py --incremental <file> [...files]           # reindex specific files
 """
 from __future__ import annotations
 

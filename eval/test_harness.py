@@ -4,7 +4,7 @@
 Run:  venv/bin/python eval/test_harness.py   (exit 0 = pass; asserts on failure)
 
 Covers the standing gate + levers that had no tests:
-  - build.build_purpose_chunk  (synthetic frontmatter chunk: marker, tag/trigger filtering, None-on-empty)
+  - indexer.build_purpose_chunk  (synthetic frontmatter chunk: marker, tag/trigger filtering, None-on-empty)
   - case_quality gate logic    (imperative detection, stale + graph-aware bucketing/exit)
   - symbols.extract            (TS/JS + shell symbol extraction — B6)
 
@@ -20,14 +20,14 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import build  # noqa: E402  (module-level import is light — no model load until main())
+import indexer  # noqa: E402  (module-level import is light — no model load until main())
 import case_quality  # noqa: E402
 import symbols  # noqa: E402
 
 
 def test_purpose_chunk():
     mem = "---\nname: Foo\ndescription: a thing\ntags:\n  - project/x\n  - topic/y\n  - status/active\n---\nbody"
-    pc = build.build_purpose_chunk("memory", Path("x/foo.md"), mem)
+    pc = indexer.build_purpose_chunk("memory", Path("x/foo.md"), mem)
     assert pc is not None and pc[0] == 0 and pc[1] == 0, pc          # (0,0) synthetic marker
     body = pc[2]
     assert "Foo: a thing" in body, body                              # name + description
@@ -35,11 +35,11 @@ def test_purpose_chunk():
     assert "status/" not in body, body                               # status/* dropped (no signal)
 
     sk = "---\nname: bar\ndescription: does X\ntriggers:\n  - go\n  - run\n---\n"
-    pc2 = build.build_purpose_chunk("skills", Path("bar/SKILL.md"), sk)
+    pc2 = indexer.build_purpose_chunk("skills", Path("bar/SKILL.md"), sk)
     assert pc2 and "bar: does X" in pc2[2] and "triggers: go, run" in pc2[2], pc2
 
-    assert build.build_purpose_chunk("memory", Path("n.md"), "no frontmatter") is None   # no fm -> None
-    assert build.build_purpose_chunk("memory", Path("n.md"), "---\ntags:\n  - type/x\n---") is not None  # tags-only ok
+    assert indexer.build_purpose_chunk("memory", Path("n.md"), "no frontmatter") is None   # no fm -> None
+    assert indexer.build_purpose_chunk("memory", Path("n.md"), "---\ntags:\n  - type/x\n---") is not None  # tags-only ok
 
 
 def test_gate_logic():

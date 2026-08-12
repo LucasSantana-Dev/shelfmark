@@ -34,7 +34,7 @@ jobs:
         env:
           HF_HUB_OFFLINE: ${{ steps.hfcache.outputs.cache-hit == 'true' && '1' || '0' }}
           TRANSFORMERS_OFFLINE: ${{ steps.hfcache.outputs.cache-hit == 'true' && '1' || '0' }}
-        run: venv/bin/python build.py
+        run: venv/bin/python indexer.py
       - name: Run eval gate (±5pp tolerance vs baseline)
         env:
           HF_HUB_OFFLINE: ${{ steps.hfcache.outputs.cache-hit == 'true' && '1' || '0' }}
