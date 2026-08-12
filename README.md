@@ -56,18 +56,27 @@ Design choices that fell out of a year of measured iteration (see
 ## Quickstart
 
 ```bash
-git clone https://github.com/LucasSantana-Dev/shelfmark && cd shelfmark
-python3 -m venv venv && venv/bin/pip install -r requirements.txt
+pipx install git+https://github.com/LucasSantana-Dev/shelfmark   # or: pip install
 
-mkdir -p ~/.shelfmark
-cp sources.yaml.example ~/.shelfmark/sources.yaml   # edit: your repos + note globs
-
-venv/bin/python build.py                            # index everything
-venv/bin/python query.py "how do we handle retry timeouts"
+shelfmark-build      # first run writes a starter ~/.shelfmark/sources.yaml — edit it, then rerun
+shelfmark-query "how do we handle retry timeouts"
 ```
 
 First build downloads `intfloat/multilingual-e5-small` (~120MB). Everything
 after that runs offline.
+
+<details>
+<summary>Prefer a local checkout instead? (contributing, editing the source)</summary>
+
+```bash
+git clone https://github.com/LucasSantana-Dev/shelfmark && cd shelfmark
+python3 -m venv venv && venv/bin/pip install -e .
+
+venv/bin/shelfmark-build
+venv/bin/shelfmark-query "how do we handle retry timeouts"
+```
+
+</details>
 
 ## MCP server (agent integration)
 
@@ -76,12 +85,13 @@ after that runs offline.
 {
   "mcpServers": {
     "shelfmark": {
-      "command": "/path/to/shelfmark/venv/bin/python",
-      "args": ["/path/to/shelfmark/mcp_server.py"]
+      "command": "shelfmark-mcp"
     }
   }
 }
 ```
+
+(Local checkout instead of `pipx install`? Use `"command": "/path/to/shelfmark/venv/bin/shelfmark-mcp"`.)
 
 Two tools:
 

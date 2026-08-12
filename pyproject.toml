@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61,<82"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shelfmark"
+version = "0.1.0"
+description = "Local hybrid retrieval (BM25 + embeddings + RRF) for agent memory and codebases — one SQLite file, MCP server included."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Lucas Santana" }]
+requires-python = ">=3.10"
+keywords = ["rag", "retrieval", "semantic-search", "bm25", "embeddings", "mcp", "agent-memory", "hybrid-search"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "numpy>=1.26,<3",
+    "PyYAML>=6.0",
+    "rank-bm25~=0.2",
+    "sentence-transformers~=5.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/LucasSantana-Dev/shelfmark"
+Repository = "https://github.com/LucasSantana-Dev/shelfmark"
+Benchmark = "https://github.com/LucasSantana-Dev/shelfmark/blob/main/BENCHMARK.md"
+
+[project.scripts]
+shelfmark-build = "build:main"
+shelfmark-query = "query:main"
+shelfmark-mcp = "mcp_server:main"
+
+[tool.setuptools]
+py-modules = [
+    "build",
+    "chunkers",
+    "config",
+    "diff_pack",
+    "mcp_server",
+    "pack",
+    "populate_symbols",
+    "query",
+    "report",
+    "retrieval",
+    "session_chunker",
+    "symbols",
+]

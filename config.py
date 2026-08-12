@@ -9,7 +9,7 @@ Everything the engine needs to know about YOUR machine lives in two places:
    RAG_MODEL    sentence-transformers model name  (default: intfloat/multilingual-e5-small)
    RAG_DIM      embedding dimension of RAG_MODEL  (default: 384)
 
-2. sources.yaml — what to index (see sources.yaml.example):
+2. sources.yaml — what to index (auto-created on first run if missing):
    repos:      code repos to index (code + docs + CHANGELOG + git commits)
    sources:    [{type: <label>, glob: <pattern>}] markdown corpora (notes, docs, ...)
    code_globs: loose script globs indexed as source_type=workstation-code
@@ -19,6 +19,7 @@ Import from here; never hardcode paths in engine modules.
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 import yaml
@@ -33,6 +34,30 @@ SOURCES_FILE = Path(
     os.environ.get("RAG_SOURCES") or ROOT / "sources.yaml"
 ).expanduser()
 
+_STARTER_SOURCES_YAML = """\
+# shelfmark corpus configuration.
+# Fill in what to index, then rerun. ~ and $VARS are expanded in every path.
+
+# Code repos: indexed for source code (py/ts/js/sh), docs/**/*.md, README.md,
+# CHANGELOG.md, docs/specs/**, docs/roadmap.md, and the last 180 days of git
+# commit messages.
+repos: []
+# repos:
+#   - ~/dev/my-main-project
+
+# Markdown corpora: type is a free label you filter on at query time
+# (--scope <type>).
+sources: []
+# sources:
+#   - type: memory
+#     glob: ~/notes/memory/**/*.md
+
+# Loose scripts outside any repo, indexed as source_type=workstation-code.
+code_globs: []
+# code_globs:
+#   - ~/scripts/*.sh
+"""
+
 
 def _expand(p: str) -> str:
     return os.path.expanduser(os.path.expandvars(str(p)))
@@ -40,6 +65,13 @@ def _expand(p: str) -> str:
 
 def _load_sources_file() -> dict:
     if not SOURCES_FILE.exists():
+        SOURCES_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SOURCES_FILE.write_text(_STARTER_SOURCES_YAML, encoding="utf-8")
+        print(
+            f"shelfmark: no config found — wrote a starter one to {SOURCES_FILE}. "
+            "Add your repos/notes there, then rerun.",
+            file=sys.stderr,
+        )
         return {}
     try:
         data = yaml.safe_load(SOURCES_FILE.read_text(encoding="utf-8"))

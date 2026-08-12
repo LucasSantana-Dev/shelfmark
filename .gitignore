@@ -16,3 +16,4 @@ eval/results/
 eval/*.json
 !eval/baseline-public-train.json
 !eval/baseline-public-holdout.json
+*.egg-info/
