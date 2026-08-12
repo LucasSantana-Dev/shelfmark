@@ -9,17 +9,17 @@
 {"query": "recover when the server working directory was deleted", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
 {"query": "detect which configured repo the current working directory belongs to", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
 {"query": "query telemetry logging to a local sqlite table", "expect_path_contains": "retrieval.py", "expect_scope": "code"}
-{"query": "E5 passage prefix added at embed time", "expect_path_contains": "build.py", "expect_scope": "code"}
-{"query": "contextual chunk prefix with source type repo file symbol", "expect_path_contains": "build.py", "expect_scope": "code"}
-{"query": "one concise card instead of full chunks for ephemeral notes", "expect_path_contains": "build.py", "expect_scope": "code"}
-{"query": "superseded notes with valid_to removed from the index", "expect_path_contains": "build.py", "expect_scope": "code"}
-{"query": "corrupt sqlite index detected and rebuilt fresh", "expect_path_contains": "build.py", "expect_scope": "code"}
-{"query": "vacuum backup snapshots keep newest three", "expect_path_contains": "build.py", "expect_scope": "code"}
-{"query": "git log commit messages indexed as chunks", "expect_path_contains": "build.py", "expect_scope": "code"}
-{"query": "which directories are excluded from code indexing", "expect_path_contains": "build.py", "expect_scope": "code"}
-{"query": "skip repos that have a knowledge graph when embedding code", "expect_path_contains": "build.py", "expect_scope": "code"}
-{"query": "yaml frontmatter parsed best effort returning empty dict", "expect_path_contains": "build.py", "expect_scope": "code"}
-{"query": "classify a file path into a source type label", "expect_path_contains": "build.py", "expect_scope": "code"}
+{"query": "E5 passage prefix added at embed time", "expect_path_contains": "indexer.py", "expect_scope": "code"}
+{"query": "contextual chunk prefix with source type repo file symbol", "expect_path_contains": "indexer.py", "expect_scope": "code"}
+{"query": "one concise card instead of full chunks for ephemeral notes", "expect_path_contains": "indexer.py", "expect_scope": "code"}
+{"query": "superseded notes with valid_to removed from the index", "expect_path_contains": "indexer.py", "expect_scope": "code"}
+{"query": "corrupt sqlite index detected and rebuilt fresh", "expect_path_contains": "indexer.py", "expect_scope": "code"}
+{"query": "vacuum backup snapshots keep newest three", "expect_path_contains": "indexer.py", "expect_scope": "code"}
+{"query": "git log commit messages indexed as chunks", "expect_path_contains": "indexer.py", "expect_scope": "code"}
+{"query": "which directories are excluded from code indexing", "expect_path_contains": "indexer.py", "expect_scope": "code"}
+{"query": "skip repos that have a knowledge graph when embedding code", "expect_path_contains": "indexer.py", "expect_scope": "code"}
+{"query": "yaml frontmatter parsed best effort returning empty dict", "expect_path_contains": "indexer.py", "expect_scope": "code"}
+{"query": "classify a file path into a source type label", "expect_path_contains": "indexer.py", "expect_scope": "code"}
 {"query": "environment variable for the data directory and index location", "expect_path_contains": "config.py", "expect_scope": "code"}
 {"query": "malformed sources yaml raises a clear error", "expect_path_contains": "config.py", "expect_scope": "code"}
 {"query": "split markdown into chunks by heading", "expect_path_contains": "chunkers.py", "expect_scope": "code"}

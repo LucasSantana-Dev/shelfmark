@@ -18,7 +18,7 @@ RAG_QLOG=off venv/bin/python eval/run.py --dataset eval/holdout-public.jsonl --l
 
 | Set | n | Hit@1 | Hit@3 | Hit@5 | MRR |
 |-----|---|-------|-------|-------|-----|
-| Train | 42 | 0.762 | 0.881 | **0.905** | 0.827 |
+| Train | 42 | 0.762 | 0.905 | **0.929** | 0.834 |
 | Holdout (frozen) | 10 | 0.800 | 1.000 | **1.000** | 0.883 |
 
 Committed baselines: `eval/baseline-public-train.json`, `eval/baseline-public-holdout.json`

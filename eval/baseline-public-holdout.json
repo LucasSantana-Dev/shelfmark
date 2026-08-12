@@ -13,5 +13,80 @@
       "hit@5": 1.0
     }
   },
+  "per_case": [
+    {
+      "query": "camelCase and snake_case sub-token splitting for search",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:241"
+    },
+    {
+      "query": "double loading of multi gigabyte models prevented by a lock",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:167"
+    },
+    {
+      "query": "symbol definition boost when query mentions an identifier",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 3,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/case_quality.py:24"
+    },
+    {
+      "query": "synthetic purpose chunk from note frontmatter name and description",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:399"
+    },
+    {
+      "query": "deduplicate files reached through symlinks during indexing",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:170"
+    },
+    {
+      "query": "where do the curated repo list and markdown globs come from",
+      "expect": [
+        "config.py",
+        "indexer.py"
+      ],
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:135"
+    },
+    {
+      "query": "python ast walk collecting function definitions and calls",
+      "expect": "symbols.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/symbols.py:16"
+    },
+    {
+      "query": "clamp the top parameter to sane bounds without raising",
+      "expect": "mcp_server.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/mcp_server.py:118"
+    },
+    {
+      "query": "exclude symbol lookup questions from retrieval scoring",
+      "expect": "eval/run.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/run.py:71"
+    },
+    {
+      "query": "reindex a file incrementally right after it is written",
+      "expect": "reindex-hook.sh",
+      "scope": "code",
+      "hit_rank": 2,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/examples/claude-code/sessionstart-drift-reindex.sh:49"
+    }
+  ],
   "excluded_symbol_lookup": 0
 }

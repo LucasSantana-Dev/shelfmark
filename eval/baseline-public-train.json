@@ -1,16 +1,16 @@
 {
   "n": 42,
-  "mrr": 0.827,
+  "mrr": 0.834,
   "hit@1": 0.762,
-  "hit@3": 0.881,
-  "hit@5": 0.905,
+  "hit@3": 0.905,
+  "hit@5": 0.929,
   "by_scope": {
     "code": {
       "n": 39,
-      "mrr": 0.814,
+      "mrr": 0.821,
       "hit@1": 0.744,
-      "hit@3": 0.872,
-      "hit@5": 0.897
+      "hit@3": 0.897,
+      "hit@5": 0.923
     },
     "repo-readme": {
       "n": 3,
@@ -20,5 +20,307 @@
       "hit@5": 1.0
     }
   },
+  "per_case": [
+    {
+      "query": "how are BM25 and cosine scores combined into one ranking",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:241"
+    },
+    {
+      "query": "reciprocal rank fusion constant value",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": null,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/sweep.py:75"
+    },
+    {
+      "query": "why does memory scope never get reranked",
+      "expect": [
+        "retrieval.py",
+        "mcp_server.py"
+      ],
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:241"
+    },
+    {
+      "query": "auto rerank trigger for weak ambiguous queries threshold margin",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": null,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/run.py:132"
+    },
+    {
+      "query": "what happens when the reranker model is not cached on this machine",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 2,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/mcp_server.py:19"
+    },
+    {
+      "query": "corpus cache invalidated when the sqlite index file changes",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:167"
+    },
+    {
+      "query": "recency prior freshness tie-break for memory chunks",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": null,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/chunkers.py:103"
+    },
+    {
+      "query": "fallback when sentence transformer raises embedding_dimension TypeError",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:97"
+    },
+    {
+      "query": "recover when the server working directory was deleted",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:144"
+    },
+    {
+      "query": "detect which configured repo the current working directory belongs to",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:155"
+    },
+    {
+      "query": "query telemetry logging to a local sqlite table",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:394"
+    },
+    {
+      "query": "E5 passage prefix added at embed time",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:495"
+    },
+    {
+      "query": "contextual chunk prefix with source type repo file symbol",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:584"
+    },
+    {
+      "query": "one concise card instead of full chunks for ephemeral notes",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:429"
+    },
+    {
+      "query": "superseded notes with valid_to removed from the index",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:505"
+    },
+    {
+      "query": "corrupt sqlite index detected and rebuilt fresh",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:458"
+    },
+    {
+      "query": "vacuum backup snapshots keep newest three",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:479"
+    },
+    {
+      "query": "git log commit messages indexed as chunks",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:223"
+    },
+    {
+      "query": "which directories are excluded from code indexing",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 2,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/sweep.py:166"
+    },
+    {
+      "query": "skip repos that have a knowledge graph when embedding code",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:135"
+    },
+    {
+      "query": "yaml frontmatter parsed best effort returning empty dict",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:371"
+    },
+    {
+      "query": "classify a file path into a source type label",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:333"
+    },
+    {
+      "query": "environment variable for the data directory and index location",
+      "expect": "config.py",
+      "scope": "code",
+      "hit_rank": 3,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:479"
+    },
+    {
+      "query": "malformed sources yaml raises a clear error",
+      "expect": "config.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/config.py:66"
+    },
+    {
+      "query": "split markdown into chunks by heading",
+      "expect": "chunkers.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/chunkers.py:103"
+    },
+    {
+      "query": "detect programming language from file extension",
+      "expect": "chunkers.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/chunkers.py:126"
+    },
+    {
+      "query": "typescript regex symbol extraction exports classes interfaces",
+      "expect": "symbols.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/symbols.py:169"
+    },
+    {
+      "query": "populate call graph tables from indexed chunks",
+      "expect": "populate_symbols.py",
+      "scope": "code",
+      "hit_rank": 5,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/sweep.py:166"
+    },
+    {
+      "query": "index agent session transcripts from jsonl files",
+      "expect": "session_chunker.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/session_chunker.py:37"
+    },
+    {
+      "query": "MCP server prewarm so the first query is not slow",
+      "expect": "mcp_server.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/mcp_server.py:19"
+    },
+    {
+      "query": "json rpc tools list and tools call dispatch loop",
+      "expect": "mcp_server.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/mcp_server.py:141"
+    },
+    {
+      "query": "search knowledge tool searches all repos without cwd scoping",
+      "expect": "mcp_server.py",
+      "scope": "code",
+      "hit_rank": 2,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:241"
+    },
+    {
+      "query": "truncate per hit text unless full output requested",
+      "expect": "query.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/query.py:24"
+    },
+    {
+      "query": "compute mean reciprocal rank and hit at k metrics",
+      "expect": "eval/run.py",
+      "scope": "code",
+      "hit_rank": 2,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/sweep.py:75"
+    },
+    {
+      "query": "fail the gate when a metric regresses more than five points",
+      "expect": "eval/check.sh",
+      "scope": "code",
+      "hit_rank": 2,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/sweep.py:137"
+    },
+    {
+      "query": "sweep parameter combinations and compare eval results",
+      "expect": "eval/sweep.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/sweep.py:137"
+    },
+    {
+      "query": "detect stale eval cases whose expected files left the index",
+      "expect": "eval/case_quality.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/case_quality.py:76"
+    },
+    {
+      "query": "inject top retrieval hits into the agent prompt automatically",
+      "expect": "autorecall-hook.sh",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/examples/claude-code/autorecall-hook.sh:1"
+    },
+    {
+      "query": "nightly full rebuild with regression alert webhook",
+      "expect": "rag-nightly-rebuild.sh",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/examples/claude-code/rag-nightly-rebuild.sh:14"
+    },
+    {
+      "query": "what is shelfmark and why does it exist",
+      "expect": "README.md",
+      "scope": "repo-readme",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/README.md:1"
+    },
+    {
+      "query": "how do I point the indexer at my own repos and notes",
+      "expect": [
+        "README.md",
+        "sources.yaml.example"
+      ],
+      "scope": "repo-readme",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/README.md:101"
+    },
+    {
+      "query": "how to connect this to Claude Code as an MCP server",
+      "expect": "README.md",
+      "scope": "repo-readme",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/README.md:1"
+    }
+  ],
   "excluded_symbol_lookup": 0
 }
