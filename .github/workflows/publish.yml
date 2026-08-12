@@ -1,9 +1,9 @@
-# Publish `shelfmark` to PyPI via Trusted Publishing (OIDC) — NO API token, ever.
+# Publish `shelfmark-rag` to PyPI via Trusted Publishing (OIDC) — NO API token, ever.
 #
 # ONE-TIME PyPI SETUP (do this once, on pypi.org):
 #   pypi.org -> your account -> Publishing -> "Add a pending publisher" (works even
 #   though `shelfmark` isn't on PyPI yet — the first run creates the project), with:
-#     PyPI Project Name:  shelfmark
+#     PyPI Project Name:  shelfmark-rag
 #     Owner:              LucasSantana-Dev
 #     Repository name:    shelfmark
 #     Workflow filename:  publish.yml

@@ -58,7 +58,7 @@ Design choices that fell out of a year of measured iteration (see
 ## Quickstart
 
 ```bash
-pipx install git+https://github.com/LucasSantana-Dev/shelfmark   # or: pip install
+pip install shelfmark-rag   # or: pipx install shelfmark-rag
 
 shelfmark-build      # first run writes a starter ~/.shelfmark/sources.yaml — edit it, then rerun
 shelfmark-query "how do we handle retry timeouts"
