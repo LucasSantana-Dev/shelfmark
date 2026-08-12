@@ -26,6 +26,10 @@ jobs:
           key: hf-models-multilingual-e5-small-v1
       - name: Create venv and install dependencies
         run: python3 -m venv venv && venv/bin/pip install -r requirements.txt
+      - name: Configure sources.yaml to index this repo (matches BENCHMARK.md's reproduce steps)
+        run: |
+          mkdir -p ~/.shelfmark
+          printf 'repos:\n  - %s\n' "$(pwd)" > ~/.shelfmark/sources.yaml
       - name: Build index
         env:
           HF_HUB_OFFLINE: ${{ steps.hfcache.outputs.cache-hit == 'true' && '1' || '0' }}
