@@ -145,6 +145,11 @@ Pick shelfmark when you want agent recall over your own repos and notes
 without standing up infrastructure. Pick a hosted vector DB when you need
 multi-tenant scale across millions of documents — that's a different problem.
 
+Building a **retrieval quality gate** instead of an agent-recall engine? See
+[hitgate](https://github.com/LucasSantana-Dev/hitgate) — label-free regression
+testing for retrieval ranking, plugs into any retriever. Different layer,
+same underlying hybrid-retrieval lineage.
+
 ## Configuration
 
 All optional — see `.env.example` for the full list. Highlights:
