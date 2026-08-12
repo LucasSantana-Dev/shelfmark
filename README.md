@@ -28,6 +28,12 @@ written down somewhere. shelfmark indexes all of it into one local SQLite file
 and answers "what did we decide about X / where did we handle Y" in a single
 query, with `path:line` citations.
 
+shelfmark is the retrieval engine that came out of a year of running AI coding
+agents daily — most recently distilled from
+[forgekit](https://github.com/LucasSantana-Dev/forgekit), an AI dev toolkit for
+coding agents. Every design choice below was forced by a real failure mode in
+that daily use, not picked off a paper.
+
 Design choices that fell out of a year of measured iteration (see
 `eval/holdout-policy.md` and inline rationale comments):
 
@@ -130,25 +136,29 @@ retrieval quality from silently rotting as the corpus grows.
 
 No cross-tool benchmark exists yet (see [Methodology & honest
 limitations](BENCHMARK.md#methodology--honest-limitations) — we'd genuinely
-like to see one run). Qualitative trade-offs:
+like to see one run). Qualitative trade-offs, no fabricated numbers:
 
-| | shelfmark | Chroma / Weaviate + LangChain | grep / ripgrep | Cloud vector DB (Pinecone etc.) |
-|---|---|---|---|---|
-| Runs offline, no server | Yes — one SQLite file | No — separate service | Yes | No |
-| Lexical + semantic fused | Yes (BM25 + embeddings, RRF) | Usually semantic-only | Lexical-only | Usually semantic-only |
-| Code-symbol aware | Yes (camelCase/snake_case, symbol boost) | No | Substring only | No |
-| MCP server included | Yes | No (build your own) | No | No |
-| Regression-gated eval harness | Yes (`eval/check.sh`) | Bring your own | N/A | Varies |
-| Setup | `pip install` + one YAML file | Vector DB + embedding pipeline + glue | None | Account + API keys |
+| Option | When to pick shelfmark instead | Why |
+|---|---|---|
+| **mem0** (managed, cloud-first memory layer) | You want full local data ownership and cross-repo search | One SQLite file, zero setup, MCP native. mem0 adds a hosted service you may not need |
+| **Letta / MemGPT** (stateful agent framework) | You want a retriever, not a framework | Standalone tool that plugs into any MCP client; Letta expects you to adopt its agent runtime |
+| **Zep** (hosted conversation memory) | You want permanent, local, cross-repo recall, not just chat threads | Single machine, no hosted dependency; Zep targets conversation history, not code/docs |
+| **Cursor / Continue / Cody built-in indexing** | You want search outside one editor, or from a non-IDE agent | Runs anywhere MCP runs; editor-built-in indexes don't leave the editor |
+| **DIY LangChain + Chroma/Weaviate** | You want hybrid retrieval and an eval gate without wiring it yourself | Reranking, RRF fusion, and `eval/check.sh` regression gates ship in the box |
+| **Claude Code's built-in project memory** | You want hybrid (lexical + semantic) search across repos, not one workspace | File-based single-workspace memory has no ranking and no cross-repo scope |
+| **Chroma / Weaviate raw, or Pinecone** (no framework) | You want zero infrastructure to stand up | One SQLite file vs. a vector DB service + embedding pipeline + glue code |
+| **grep / ripgrep** | You need paraphrase recall, not just exact substrings | Lexical-only; shelfmark fuses BM25 with embeddings so "retry timeout" also matches "backoff on failure" |
 
-Pick shelfmark when you want agent recall over your own repos and notes
-without standing up infrastructure. Pick a hosted vector DB when you need
-multi-tenant scale across millions of documents — that's a different problem.
+Pick a hosted vector DB when you need multi-tenant scale across millions of
+documents — that's a different problem than agent recall over your own repos.
 
-Building a **retrieval quality gate** instead of an agent-recall engine? See
-[hitgate](https://github.com/LucasSantana-Dev/hitgate) — label-free regression
-testing for retrieval ranking, plugs into any retriever. Different layer,
-same underlying hybrid-retrieval lineage.
+Want to measure and improve retrieval ranking quality on your own pipeline,
+independent of any specific agent? [hitgate](https://github.com/LucasSantana-Dev/hitgate)
+provides label-free regression testing for hybrid retrievers. shelfmark and
+hitgate share a common hybrid-retrieval foundation (BM25 + embeddings + RRF)
+but serve complementary use cases: shelfmark for zero-setup agent memory with
+MCP integration, hitgate for ranking evaluation and quality gates on any
+retriever you already have.
 
 ## Configuration
 
