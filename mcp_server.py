@@ -26,8 +26,9 @@ def _prewarm() -> None:
     """
     try:
         retrieval._get_model()
-        retrieval._load(None, None)  # rag_query default scope
-        retrieval._load(KNOWLEDGE_SCOPE, None)  # search_knowledge scope
+        for db in retrieval.DBS:
+            retrieval._load(db, None, None)  # rag_query default scope
+            retrieval._load(db, KNOWLEDGE_SCOPE, None)  # search_knowledge scope
         if os.environ.get("RAG_CODE_RERANK", "off").lower() in ("on", "1", "true"):
             retrieval._get_reranker()
         print("prewarm complete", file=sys.stderr)

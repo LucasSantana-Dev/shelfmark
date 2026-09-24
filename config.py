@@ -26,6 +26,13 @@ import yaml
 
 ROOT = Path(os.environ.get("RAG_HOME", "~/.shelfmark")).expanduser()
 DB = Path(os.environ.get("RAG_DB") or ROOT / "index.sqlite")
+# Extra index files queried alongside DB, each ranked on its own (own BM25 term
+# statistics) and fused by score. os.pathsep-separated. Prototype hook for
+# per-client layers: a client's knowledge lives in its own file, never in DB.
+LAYER_DBS: list[Path] = [
+    Path(p).expanduser() for p in os.environ.get("RAG_LAYER_DBS", "").split(os.pathsep) if p
+]
+DBS: list[Path] = [DB, *LAYER_DBS]
 QLOG = ROOT / "queries.sqlite"
 MODEL_NAME = os.environ.get("RAG_MODEL", "intfloat/multilingual-e5-small")
 DIM = int(os.environ.get("RAG_DIM", "384"))
