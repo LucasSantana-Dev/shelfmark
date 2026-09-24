@@ -184,6 +184,33 @@ All optional — see `.env.example` for the full list. Highlights:
 | `RAG_RERANK_AUTO` | on | rerank weak/ambiguous queries |
 | `RAG_CODE_RERANK` | off | bge-reranker-v2-m3 for code scopes (+4.9pp, ~2.2GB) |
 | `RAG_QLOG` | off | local query telemetry (powers `report.py`) |
+| `RAG_CLIENT` | from cwd | active client layer; `none` = general only |
+
+### Client layers
+
+If you work for more than one client, keep each client's business knowledge
+out of the index every session reads. Declare clients in `sources.yaml`:
+
+```yaml
+clients:
+  acme:
+    roots: [~/dev/acme-app, ~/notes/acme]
+```
+
+- Files under a client's `roots`, or with `client: acme` in their frontmatter,
+  are indexed into that client's own file (`index.client-acme.sqlite`), never
+  the general index. `client: none` keeps a note general even inside a root.
+  An unknown slug is skipped, not sent to general.
+- A query reads the general index plus the **active** client's file only. The
+  active client comes from the process (`RAG_CLIENT`, or the process cwd under
+  a client root), never from a tool-call argument, so an agent cannot switch
+  itself into another client's layer.
+- Session transcripts are routed by the cwd they recorded.
+- BM25 is scored per file, so one client's vocabulary never shapes another's
+  term statistics; results are then ranked together. With no clients declared,
+  ranking is unchanged.
+- Dropping a client is dropping its file and its `index.client-<slug>.backup-*`
+  snapshots; nothing of it lives in the general index.
 
 ## Contributing
 

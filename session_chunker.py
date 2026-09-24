@@ -19,7 +19,8 @@ import time
 from pathlib import Path
 from typing import Iterator
 
-from config import DB as INDEX_DB
+from config import CLIENTS, DB as INDEX_DB
+from config import all_dbs, client_db, client_for_path
 
 HOME = Path.home()
 # Claude Code session transcripts (JSONL). Point RAG_SESSIONS_DIR elsewhere for
@@ -85,6 +86,24 @@ def iter_session_chunks(days: int) -> Iterator[dict]:
             lines = f.read_text(errors="replace").splitlines()
         except OSError:
             continue
+        # Route the whole transcript by the cwd it recorded: a session run inside
+        # a client root belongs to that client's index, never the general one.
+        session_cwd = None
+        for line in lines:
+            try:
+                session_cwd = json.loads(line).get("cwd")
+            except (json.JSONDecodeError, AttributeError):
+                continue
+            if session_cwd:
+                break
+        if session_cwd:
+            slug = client_for_path(session_cwd)
+            db = INDEX_DB if slug is None else client_db(slug)
+        elif CLIENTS:
+            print(f"[sessions] skip (no cwd recorded, cannot route): {f}", file=sys.stderr)
+            continue
+        else:
+            db = INDEX_DB
         # Aggregate into chunks of ~CHUNK_MAX_CHARS
         buffer: list[str] = []
         buffer_size = 0
@@ -111,6 +130,7 @@ def iter_session_chunks(days: int) -> Iterator[dict]:
                 "text": text[:CHUNK_MAX_CHARS],
                 "sha": sha,
                 "mtime": f.stat().st_mtime,
+                "db": db,
             }
             chunk_idx += len(buffer)
             buffer = []
@@ -150,10 +170,12 @@ def main() -> int:
     from sentence_transformers import SentenceTransformer
     model = SentenceTransformer(MODEL_NAME)
 
-    conn = sqlite3.connect(INDEX_DB, timeout=10)
-    conn.execute("PRAGMA journal_mode=WAL"); conn.execute("PRAGMA busy_timeout=10000")  # WAL+timeout hardening
-    conn.execute("DELETE FROM chunks WHERE source_type = 'session'")
-    conn.commit()
+    from indexer import connect
+
+    conns = {db: connect(db) for db in all_dbs()}
+    for conn in conns.values():
+        conn.execute("DELETE FROM chunks WHERE source_type = 'session'")
+        conn.commit()
 
     started = time.time()
     written = 0
@@ -163,23 +185,21 @@ def main() -> int:
         # E5 model requires "passage: " prefix for indexed chunks
         prefixed_texts = [f"passage: {t}" for t in texts]
         vecs = model.encode(prefixed_texts, normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=False)
-        rows = [
-            (c["source_type"], c["repo"], c["language"], c["symbol"],
-             c["path"], c["start"], c["end"], c["text"],
-             c["sha"], c["mtime"], vec.tobytes())
-            for c, vec in zip(batch, vecs)
-        ]
-        conn.executemany(
-            "INSERT INTO chunks (source_type, repo, language, symbol, path, "
-            "start_line, end_line, text, file_sha, mtime, embedding) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-            rows,
-        )
-        written += len(rows)
+        for c, vec in zip(batch, vecs):
+            conns[c["db"]].execute(
+                "INSERT INTO chunks (source_type, repo, language, symbol, path, "
+                "start_line, end_line, text, file_sha, mtime, embedding) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (c["source_type"], c["repo"], c["language"], c["symbol"],
+                 c["path"], c["start"], c["end"], c["text"],
+                 c["sha"], c["mtime"], vec.tobytes()),
+            )
+        written += len(batch)
         if i % (BATCH * 8) == 0 and i > 0:
             print(f"[sessions] {written}/{len(chunks)} ({time.time()-started:.0f}s)", flush=True)
-    conn.commit()
-    conn.close()
+    for conn in conns.values():
+        conn.commit()
+        conn.close()
     print(f"[sessions] done: {written} chunks in {time.time()-started:.0f}s", flush=True)
     return 0
 

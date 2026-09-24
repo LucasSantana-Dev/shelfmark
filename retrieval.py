@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 from rank_bm25 import BM25Okapi
 
-from config import DBS, DIM, MODEL_NAME, QLOG, ROOT
+from config import DIM, MODEL_NAME, QLOG, ROOT, all_dbs, query_dbs
 from config import CURATED_REPOS as REPO_ROOTS
 
 RRF_K = 60
@@ -49,7 +49,7 @@ _cache_db_stamp: tuple[float, int] | None = None
 
 def _db_stamp() -> tuple:
     stamps = []
-    for db in DBS:
+    for db in all_dbs():
         try:
             st = os.stat(db)
             stamps.append((st.st_mtime, st.st_size))
@@ -195,6 +195,11 @@ def _load(db: Path, scope_types: list[str] | None, scope_repos: list[str] | None
 
 
 def _load_uncached(key: tuple, db: Path, scope_types: list[str] | None, scope_repos: list[str] | None) -> tuple:
+    if not db.exists():
+        # A configured client layer that was never built (or was purged) is an
+        # empty layer. Never let the read path create the file.
+        _cache[key] = ([], np.zeros((0, DIM), dtype=np.float32), BM25Okapi([[""]]))
+        return _cache[key]
     conn = sqlite3.connect(db, timeout=10)
     conn.execute("PRAGMA busy_timeout=10000")  # WAL+timeout hardening (WAL set by writer)
     where: list[str] = []
@@ -267,7 +272,9 @@ def search(
         detected = cwd_repo(cwd)
         if detected:
             scope_repos = [detected]
-    layers = [_load(db, scope_types, scope_repos) for db in DBS]
+    # Layers come from the process (config.active_client), never from `cwd`:
+    # `cwd` is a tool-call argument and only drives repo auto-scoping above.
+    layers = [_load(db, scope_types, scope_repos) for db in query_dbs()]
     if not any(layer[0] for layer in layers):
         return []
 

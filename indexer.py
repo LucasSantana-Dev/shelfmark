@@ -68,7 +68,8 @@ def _is_card_path(path) -> bool:
     n = path.name.lower()
     return any(pat in n for pat in CARD_ONLY_PATH_PATTERNS)
 
-from config import CURATED_REPOS, DB, MODEL_NAME, ROOT, WORKSTATION_CODE_GLOBS
+from config import CLIENTS, CURATED_REPOS, DB, MODEL_NAME, ROOT, WORKSTATION_CODE_GLOBS
+from config import all_dbs, client_db, client_for_path
 from config import SOURCES as _CONFIG_SOURCES
 
 HOME = Path.home()
@@ -270,6 +271,7 @@ def collect_commit_chunks() -> list[dict]:
                     "sha": sha,
                     "mtime": 0.0,
                     "meta": f"{author} · {date_str}",
+                    "db": route(repo),
                 }
             )
     return rows
@@ -455,33 +457,61 @@ def build_card_chunk(stype: str, path: Path, text: str):
     return (0, 0, body[:400], title)
 
 
-def connect() -> sqlite3.Connection:
+_FRONTMATTER_CLIENT_RE = re.compile(r"^client:\s*['\"]?([A-Za-z0-9-]+)['\"]?\s*$", re.M)
+
+
+def route(path: Path, text: str = "") -> Path | None:
+    """Index file a source belongs to, or None to skip it.
+
+    Top-level frontmatter `client: <slug>` wins (`client: none` = general, even
+    inside a client root); otherwise a file under a client's roots belongs to
+    that client; otherwise general. An unknown slug is skipped, never sent to
+    general: a typo must not leak a client's note into every session.
+    """
+    if text.startswith("---"):
+        end = text.find("\n---", 3)
+        m = _FRONTMATTER_CLIENT_RE.search(text[3:end] if end != -1 else "")
+        if m:
+            slug = m.group(1)
+            if slug == "none":
+                return DB
+            if slug in CLIENTS:
+                return client_db(slug)
+            print(f"skip (unknown client {slug!r}): {path}", file=sys.stderr)
+            return None
+    slug = client_for_path(path)
+    return DB if slug is None else client_db(slug)
+
+
+def connect(db: Path = DB) -> sqlite3.Connection:
     ROOT.mkdir(parents=True, exist_ok=True)
-    if DB.exists():
+    db.parent.mkdir(parents=True, exist_ok=True)
+    if db.exists():
         # Corruption probe (router pattern): quick_check first; a broken DB is
         # renamed aside and rebuilt from sources instead of crashing mid-build.
         try:
-            probe = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
+            probe = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
             ok = probe.execute("PRAGMA quick_check").fetchone()[0] == "ok"
             probe.close()
             if not ok:
                 raise sqlite3.DatabaseError("quick_check failed")
         except sqlite3.DatabaseError:
-            aside = DB.with_suffix(f".corrupt-{int(time.time())}")
-            DB.rename(aside)
+            aside = db.with_suffix(f".corrupt-{int(time.time())}")
+            db.rename(aside)
             print(f"corrupt index moved aside: {aside.name} (will rebuild fresh)")
-    conn = sqlite3.connect(DB, timeout=10)
+    conn = sqlite3.connect(db, timeout=10)
     conn.execute("PRAGMA journal_mode=WAL"); conn.execute("PRAGMA busy_timeout=10000")  # WAL+timeout hardening
     conn.executescript(SCHEMA)
     return conn
 
 
-def backup_db(keep: int = 3) -> None:
-    """VACUUM INTO snapshot after a successful build; keep newest `keep`."""
-    backups = sorted(ROOT.glob("index.backup-*.sqlite"))
-    dest = ROOT / f"index.backup-{int(time.time())}.sqlite"
+def backup_db(db: Path = DB, keep: int = 3) -> None:
+    """Snapshot after a successful build; keep newest `keep`. Backups sit next
+    to their own index (<stem>.backup-*) so a client's backups go with it."""
+    backups = sorted(db.parent.glob(f"{db.stem}.backup-*.sqlite"))
+    dest = db.parent / f"{db.stem}.backup-{int(time.time())}.sqlite"
     try:
-        src = sqlite3.connect(DB)
+        src = sqlite3.connect(db)
         dst = sqlite3.connect(dest)
         src.backup(dst)
         dst.close(); src.close()
@@ -503,13 +533,18 @@ def embed(model, texts: list[str]) -> np.ndarray:
 
 
 def index_files(
-    conn: sqlite3.Connection, model, files: list[tuple[str, Path]], purge_paths: list[str]
+    conn_for, model, files: list[tuple[str, Path]], purge_paths: list[str]
 ) -> int:
-    for p in purge_paths:
-        conn.execute("DELETE FROM chunks WHERE path = ?", (p,))
+    """conn_for(db) returns an open connection for that index file."""
+    # A file can change layer (client tag edited, moved into a client root), so
+    # its old chunks are purged from EVERY index, not just the one it lands in.
+    for db in all_dbs():
+        if purge_paths and db.exists():
+            conn = conn_for(db)
+            for p in purge_paths:
+                conn.execute("DELETE FROM chunks WHERE path = ?", (p,))
     total = 0
-    batch_texts: list[str] = []
-    batch_meta: list[dict] = []
+    batches: dict[Path, tuple[list[str], list[dict]]] = {}
     for stype_hint, path in files:
         if stype_hint == "code":
             _repo = next(
@@ -520,6 +555,9 @@ def index_files(
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
+            continue
+        db = route(path, text)
+        if db is None:
             continue
         if stype_hint == "memory":
             # Bitemporal supersession (2026-07-28): a note with valid_to set was
@@ -554,6 +592,7 @@ def index_files(
             context_prefix = f"{stype} | {repo or ''} | {file_name} | {symbol or ''}"
             contextualized_text = f"{context_prefix}\n{body[:4000]}"
 
+            batch_texts, batch_meta = batches.setdefault(db, ([], []))
             batch_texts.append(contextualized_text)
             batch_meta.append(
                 {
@@ -570,14 +609,16 @@ def index_files(
                 }
             )
             if len(batch_texts) >= 64:
-                _flush(conn, model, batch_texts, batch_meta)
+                _flush(conn_for(db), model, batch_texts, batch_meta)
                 total += len(batch_texts)
                 batch_texts.clear()
                 batch_meta.clear()
-    if batch_texts:
-        _flush(conn, model, batch_texts, batch_meta)
-        total += len(batch_texts)
-    conn.commit()
+    for db, (batch_texts, batch_meta) in batches.items():
+        if batch_texts:
+            _flush(conn_for(db), model, batch_texts, batch_meta)
+            total += len(batch_texts)
+    for db in {*batches, *(d for d in all_dbs() if purge_paths and d.exists())}:
+        conn_for(db).commit()
     return total
 
 
@@ -616,7 +657,13 @@ def main() -> int:
     from sentence_transformers import SentenceTransformer
 
     model = SentenceTransformer(MODEL_NAME)
-    conn = connect()
+    conns: dict[Path, sqlite3.Connection] = {}
+
+    def conn_for(db: Path) -> sqlite3.Connection:
+        if db not in conns:
+            conns[db] = connect(db)
+        return conns[db]
+
     started = time.time()
 
     if args.incremental:
@@ -632,14 +679,15 @@ def main() -> int:
                 continue
             stype = classify_type(p)
             targets.append((stype, p))
-        written = index_files(conn, model, targets, purge)
+        written = index_files(conn_for, model, targets, purge)
         print(f"incremental: {len(targets)} files, {written} chunks, {time.time()-started:.1f}s")
     else:
-        conn.execute("DELETE FROM chunks")
+        for db in all_dbs():
+            conn_for(db).execute("DELETE FROM chunks")
         md_files = iter_md_sources()
         code_files = [] if args.no_code else iter_code_sources()
         files = md_files + code_files
-        written = index_files(conn, model, files, [])
+        written = index_files(conn_for, model, files, [])
         commits_written = 0
         if not args.no_code:
             commit_rows = collect_commit_chunks()
@@ -670,17 +718,21 @@ def main() -> int:
                                 vec.tobytes(),
                             )
                         )
-                    conn.executemany(
-                        "INSERT INTO chunks (source_type, repo, language, symbol, path, start_line, end_line, text, file_sha, mtime, embedding) "
-                        "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                        sql_rows,
-                    )
+                    for db, row in zip((r["db"] for r in batch), sql_rows):
+                        conn_for(db).execute(
+                            "INSERT INTO chunks (source_type, repo, language, symbol, path, start_line, end_line, text, file_sha, mtime, embedding) "
+                            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                            row,
+                        )
                     commits_written += len(batch)
-                conn.commit()
+                for conn in conns.values():
+                    conn.commit()
         print(
             f"full rebuild: md={len(md_files)} code={len(code_files)} commits={commits_written} chunks={written+commits_written} t={time.time()-started:.1f}s"
         )
-    backup_db()
+    for db in conns:
+        conns[db].close()
+        backup_db(db)
     return 0
 
 

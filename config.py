@@ -13,12 +13,21 @@ Everything the engine needs to know about YOUR machine lives in two places:
    repos:      code repos to index (code + docs + CHANGELOG + git commits)
    sources:    [{type: <label>, glob: <pattern>}] markdown corpora (notes, docs, ...)
    code_globs: loose script globs indexed as source_type=workstation-code
+   clients:    per-client knowledge layers, each in its own index file
+               (see "Client layers" below)
+
+Client layers: a client's business knowledge is indexed into its own file,
+never into the general index, so dropping that file is the purge and no query
+filter can be forgotten. A query reads the general index plus the ACTIVE
+client's file only. The active client comes from the process (RAG_CLIENT, or
+the process cwd under a client root), never from a tool-call argument.
 
 Import from here; never hardcode paths in engine modules.
 """
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -26,13 +35,7 @@ import yaml
 
 ROOT = Path(os.environ.get("RAG_HOME", "~/.shelfmark")).expanduser()
 DB = Path(os.environ.get("RAG_DB") or ROOT / "index.sqlite")
-# Extra index files queried alongside DB, each ranked on its own (own BM25 term
-# statistics) and fused by score. os.pathsep-separated. Prototype hook for
-# per-client layers: a client's knowledge lives in its own file, never in DB.
-LAYER_DBS: list[Path] = [
-    Path(p).expanduser() for p in os.environ.get("RAG_LAYER_DBS", "").split(os.pathsep) if p
-]
-DBS: list[Path] = [DB, *LAYER_DBS]
+CLIENT_ENV = "RAG_CLIENT"
 QLOG = ROOT / "queries.sqlite"
 MODEL_NAME = os.environ.get("RAG_MODEL", "intfloat/multilingual-e5-small")
 DIM = int(os.environ.get("RAG_DIM", "384"))
@@ -63,6 +66,18 @@ sources: []
 code_globs: []
 # code_globs:
 #   - ~/scripts/*.sh
+
+# Client layers. Files under a client's roots (or with `client: <slug>` in
+# their frontmatter) go to that client's own index file, never the general one.
+# `client: none` in frontmatter sends a note to the general index even from
+# inside a client root. Queries read general + the active client only.
+clients: {}
+# clients:
+#   acme:
+#     roots:
+#       - ~/dev/acme-app
+#       - ~/notes/acme
+#     db: ~/.shelfmark/index.client-acme.sqlite   # optional; this is the default
 """
 
 
@@ -107,3 +122,73 @@ SOURCES: list[tuple[str, str]] = [
 
 # Loose script globs outside any repo (indexed as workstation-code).
 WORKSTATION_CODE_GLOBS: list[str] = [_expand(g) for g in _raw.get("code_globs", [])]
+
+# Slugs become file names: restrict them so a slug can never escape ROOT.
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+
+
+def _load_clients(raw: object) -> dict[str, dict]:
+    if not raw:
+        return {}
+    if not isinstance(raw, dict):
+        raise SystemExit(f"shelfmark: 'clients' in {SOURCES_FILE} must be a mapping")
+    out: dict[str, dict] = {}
+    for slug, spec in raw.items():
+        slug = str(slug)
+        if not _SLUG_RE.match(slug) or slug == "none":
+            raise SystemExit(f"shelfmark: invalid client slug {slug!r} (use a-z, 0-9, '-'; 'none' is reserved)")
+        spec = spec if isinstance(spec, dict) else {}
+        roots = [Path(_expand(r)).resolve() for r in spec.get("roots", []) or []]
+        db = Path(_expand(spec["db"])) if spec.get("db") else ROOT / f"index.client-{slug}.sqlite"
+        out[slug] = {"roots": roots, "db": db}
+    return out
+
+
+CLIENTS: dict[str, dict] = _load_clients(_raw.get("clients"))
+
+
+def client_db(slug: str) -> Path:
+    return CLIENTS[slug]["db"]
+
+
+def client_for_path(path: Path | str) -> str | None:
+    """Client whose roots contain path (deepest root wins), else None."""
+    p = Path(path).resolve()
+    best: tuple[int, str] | None = None
+    for slug, spec in CLIENTS.items():
+        for root in spec["roots"]:
+            if p == root or root in p.parents:
+                depth = len(root.parts)
+                if best is None or depth > best[0]:
+                    best = (depth, slug)
+    return best[1] if best else None
+
+
+def active_client() -> str | None:
+    """Client for this process: RAG_CLIENT wins ('none' = general only), else
+    the process cwd. Deliberately takes no argument: a tool-call supplied cwd
+    must never be able to switch a session into another client's layer."""
+    env = os.environ.get(CLIENT_ENV, "").strip()
+    if env:
+        if env == "none":
+            return None
+        if env not in CLIENTS:
+            # Fail closed per query (ValueError, not SystemExit: a long-lived MCP
+            # server must report the error, not die or fall back to general).
+            raise ValueError(f"shelfmark: {CLIENT_ENV}={env!r} is not a configured client")
+        return env
+    try:
+        cwd = os.getcwd()
+    except OSError:
+        return None
+    return client_for_path(cwd)
+
+
+def query_dbs() -> list[Path]:
+    """Index files a query may read: general + the active client's, nothing else."""
+    slug = active_client()
+    return [DB] if slug is None else [DB, client_db(slug)]
+
+
+def all_dbs() -> list[Path]:
+    return [DB, *(spec["db"] for spec in CLIENTS.values())]

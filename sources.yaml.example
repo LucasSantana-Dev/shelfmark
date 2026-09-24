@@ -22,3 +22,13 @@ sources:
 # Loose scripts outside any repo, indexed as source_type=workstation-code.
 code_globs:
   - ~/scripts/*.sh
+
+# Client layers: each client's knowledge goes to its own index file and is
+# only read while that client is active (RAG_CLIENT, or cwd under its roots).
+# Frontmatter `client: <slug>` routes a note explicitly; `client: none` keeps
+# it general even inside a client root.
+clients:
+  acme:
+    roots:
+      - ~/dev/acme-app
+      - ~/notes/acme

@@ -72,6 +72,8 @@ jobs:
           HF_HUB_OFFLINE: ${{ steps.hfcache.outputs.cache-hit == 'true' && '1' || '0' }}
           TRANSFORMERS_OFFLINE: ${{ steps.hfcache.outputs.cache-hit == 'true' && '1' || '0' }}
         run: venv/bin/python diff_pack_test.py
+      - name: "Unit tests: client layer isolation"
+        run: venv/bin/python layers_test.py
       - name: Eval harness self-checks
         env:
           HF_HUB_OFFLINE: ${{ steps.hfcache.outputs.cache-hit == 'true' && '1' || '0' }}
