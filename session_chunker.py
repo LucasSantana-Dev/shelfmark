@@ -124,7 +124,7 @@ def iter_session_chunks(days: int) -> Iterator[dict]:
                 "repo": None,
                 "language": None,
                 "symbol": None,
-                "path": str(f),
+                "path": str(f.resolve()),
                 "start": chunk_idx,
                 "end": chunk_idx + len(buffer),
                 "text": text[:CHUNK_MAX_CHARS],

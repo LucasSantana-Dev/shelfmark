@@ -457,30 +457,52 @@ def build_card_chunk(stype: str, path: Path, text: str):
     return (0, 0, body[:400], title)
 
 
-_FRONTMATTER_CLIENT_RE = re.compile(r"^client:\s*['\"]?([A-Za-z0-9-]+)['\"]?\s*$", re.M)
+_CLIENT_KEY_RE = re.compile(r"^\s*client\s*:", re.M)
 
 
 def route(path: Path, text: str = "") -> Path | None:
     """Index file a source belongs to, or None to skip it.
 
-    Top-level frontmatter `client: <slug>` wins (`client: none` = general, even
-    inside a client root); otherwise a file under a client's roots belongs to
-    that client; otherwise general. An unknown slug is skipped, never sent to
-    general: a typo must not leak a client's note into every session.
+    Frontmatter `client: <slug>` (top level or under `metadata:`) wins;
+    `client: none` = general, even inside a client root. Without the key, a
+    file under a client's roots belongs to that client, else general.
+
+    Fails closed: once a `client` key is present in the frontmatter, anything
+    other than `none` or a configured slug (unknown slug, list, empty value,
+    YAML that does not parse) skips the file. Only an ABSENT key falls through
+    to path routing, so a typo or odd formatting never lands a client's note
+    in the index every session reads.
     """
+    text = text.lstrip("\ufeff")  # editors add BOMs silently
     if text.startswith("---"):
         end = text.find("\n---", 3)
-        m = _FRONTMATTER_CLIENT_RE.search(text[3:end] if end != -1 else "")
-        if m:
-            slug = m.group(1)
-            if slug == "none":
+        block = text[3:end] if end != -1 else text[3:]
+        if _CLIENT_KEY_RE.search(block):
+            fm = _parse_frontmatter(text)
+            value = fm.get("client")
+            if value is None and isinstance(fm.get("metadata"), dict):
+                value = fm["metadata"].get("client")
+            value = value.strip() if isinstance(value, str) else value
+            if value == "none":
+                inside = client_for_path(path)
+                if inside:
+                    print(f"note: client: none sends {path} to general from inside client {inside!r}", file=sys.stderr)
                 return DB
-            if slug in CLIENTS:
-                return client_db(slug)
-            print(f"skip (unknown client {slug!r}): {path}", file=sys.stderr)
+            if isinstance(value, str) and value in CLIENTS:
+                return client_db(value)
+            print(f"skip (unroutable client {value!r}): {path}", file=sys.stderr)
             return None
     slug = client_for_path(path)
     return DB if slug is None else client_db(slug)
+
+
+def orphan_client_indexes() -> list[Path]:
+    """index.client-<slug>.sqlite files in ROOT whose slug is not configured."""
+    known = {spec["db"].resolve() for spec in CLIENTS.values()}
+    return sorted(
+        p for p in ROOT.glob("index.client-*.sqlite")
+        if ".backup-" not in p.name and ".corrupt-" not in p.name and p.resolve() not in known
+    )
 
 
 def connect(db: Path = DB) -> sqlite3.Connection:
@@ -600,7 +622,9 @@ def index_files(
                     "repo": repo,
                     "language": language,
                     "symbol": symbol,
-                    "path": str(path),
+                    # Resolved, so a glob through a symlink and an incremental
+                    # purge by real path address the same rows.
+                    "path": str(path.resolve()),
                     "start": start,
                     "end": end,
                     "text": body[:4000],
@@ -655,6 +679,16 @@ def main() -> int:
     args = ap.parse_args()
 
     from sentence_transformers import SentenceTransformer
+
+    orphans = orphan_client_indexes()
+    if orphans:
+        # A client dropped from sources.yaml would otherwise have its untagged
+        # root files routed to GENERAL on this very build. Fail closed.
+        names = ", ".join(str(o) for o in orphans)
+        raise SystemExit(
+            f"shelfmark: orphan client index {names}: its client is no longer in sources.yaml. "
+            "Re-add the client, or archive/remove the file (and its sources globs) before rebuilding."
+        )
 
     model = SentenceTransformer(MODEL_NAME)
     conns: dict[Path, sqlite3.Connection] = {}

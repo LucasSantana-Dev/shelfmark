@@ -197,20 +197,27 @@ clients:
     roots: [~/dev/acme-app, ~/notes/acme]
 ```
 
-- Files under a client's `roots`, or with `client: acme` in their frontmatter,
-  are indexed into that client's own file (`index.client-acme.sqlite`), never
-  the general index. `client: none` keeps a note general even inside a root.
-  An unknown slug is skipped, not sent to general.
+- Files under a client's `roots`, or with `client: acme` in their frontmatter
+  (top level or under `metadata:`), are indexed into that client's own file
+  (`index.client-acme.sqlite`), never the general index. `client: none` keeps a
+  note general even inside a root (logged at index time). Once a `client` key
+  is present, anything else (unknown slug, list, empty, broken YAML) skips the
+  file instead of sending it to general.
 - A query reads the general index plus the **active** client's file only. The
   active client comes from the process (`RAG_CLIENT`, or the process cwd under
   a client root), never from a tool-call argument, so an agent cannot switch
   itself into another client's layer.
-- Session transcripts are routed by the cwd they recorded.
+- Session transcripts are routed by the cwd they recorded. Known limit: a
+  session started outside every client root that then reads a client's files
+  is indexed as general. Start client sessions inside the client's root, or
+  leave `session_chunker.py` off.
 - BM25 is scored per file, so one client's vocabulary never shapes another's
   term statistics; results are then ranked together. With no clients declared,
   ranking is unchanged.
-- Dropping a client is dropping its file and its `index.client-<slug>.backup-*`
-  snapshots; nothing of it lives in the general index.
+- A client's data lives only in its file and its `index.client-<slug>.backup-*`
+  snapshots. Removing a client from `sources.yaml` while its file still exists
+  stops the next build (its untagged files would otherwise land in general):
+  archive or remove the file and its `sources` globs first.
 
 ## Contributing
 

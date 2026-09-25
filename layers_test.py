@@ -9,6 +9,7 @@ in and which files a query may read, not ranking quality.
 import hashlib
 import json
 import os
+import shutil
 import sqlite3
 import sys
 import tempfile
@@ -25,13 +26,16 @@ os.environ["RAG_RERANK_AUTO"] = "off"  # no cross-encoder download; routing is u
 os.environ.pop("RAG_CLIENT", None)
 
 NOTES, ACME, BETA = TMP / "notes", TMP / "acme", TMP / "beta"
-for d in (NOTES, ACME, BETA, TMP / "sessions" / "p"):
+REAL, LINK = TMP / "real", TMP / "link"  # a notes dir reached through a symlink
+for d in (NOTES, ACME, BETA, REAL, TMP / "sessions" / "p"):
     d.mkdir(parents=True)
+LINK.symlink_to(REAL)
 (TMP / "sources.yaml").write_text(textwrap.dedent(f"""\
     sources:
       - {{type: memory, glob: "{NOTES}/**/*.md"}}
       - {{type: memory, glob: "{ACME}/**/*.md"}}
       - {{type: memory, glob: "{BETA}/**/*.md"}}
+      - {{type: memory, glob: "{LINK}/**/*.md"}}
     clients:
       acme:
         roots: ["{ACME}"]
@@ -51,6 +55,7 @@ TAGGED_BETA = note(NOTES / "tagged-beta.md", "beta pricing zebra tiers are confi
 GHOST = note(NOTES / "ghost.md", "ghost client typo note octopus", client="ghost")
 ACME_RULE = note(ACME / "acme-rule.md", "acme billing walrus rule charges on the fifth")
 ACME_LESSON = note(ACME / "lesson.md", "retry lesson: make handlers idempotent", client="none")
+LINKED = note(REAL / "linked.md", "linked lesson reached through a symlinked glob")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import config  # noqa: E402
@@ -99,7 +104,7 @@ indexer.index_files(conn_for, MODEL, indexer.iter_md_sources(), [])
 
 
 def test_routing():
-    assert paths_in(GEN_DB) == {"general.md", "lesson.md"}, paths_in(GEN_DB)
+    assert paths_in(GEN_DB) == {"general.md", "lesson.md", "linked.md"}, paths_in(GEN_DB)
     assert paths_in(ACME_DB) == {"acme-rule.md"}, paths_in(ACME_DB)
     assert paths_in(BETA_DB) == {"tagged-beta.md"}, paths_in(BETA_DB)
 
@@ -169,6 +174,59 @@ def test_sessions_route_by_recorded_cwd():
     assert by_file.get("in-acme.jsonl") == ACME_DB, by_file
 
 
+def test_frontmatter_variants_fail_closed():
+    out = NOTES / "x.md"  # outside every client root: path routing would say general
+    beta = config.client_db("beta")
+    cases = {
+        "\ufeff---\nclient: beta\n---\nbody": beta,               # BOM
+        "---\nclient: beta  # primary\n---\nbody": beta,           # YAML comment
+        "---\nmetadata:\n  client: beta\n---\nbody": beta,        # nested under metadata
+        "---\r\nclient: beta\r\n---\r\nbody": beta,             # CRLF
+        "---\nclient: [beta]\n---\nbody": None,                  # list: skip, not general
+        "---\nclient:\n---\nbody": None,                         # empty: skip
+        "---\nclient: beta: x: [\n---\nbody": None,              # unparseable YAML: skip
+        "---\nclient: Beta\n---\nbody": None,                    # slugs are lowercase: skip
+        "---\nname: x\n---\nclient: beta in the body": config.DB,  # body text is not frontmatter
+    }
+    for text, want in cases.items():
+        got = indexer.route(out, text)
+        assert got == want, (text, got, want)
+
+
+def test_roots_and_db_validation():
+    for bad in ({"x": {"roots": str(NOTES)}}, {"x": {"roots": ["/"]}}, {"x": {"roots": [str(Path.home())]}},
+                {"x": {"db": str(config.DB)}}, {"x": {"db": str(TMP / "d.sqlite")}, "y": {"db": str(TMP / "d.sqlite")}}):
+        try:
+            config._load_clients(bad)
+            raise AssertionError(f"must reject {bad}")
+        except SystemExit:
+            pass
+
+
+def test_case_insensitive_roots():
+    if sys.platform not in ("darwin", "win32"):
+        return
+    assert config.client_for_path(str(ACME).upper() + "/a.md") == "acme"
+
+
+def test_symlinked_glob_layer_move():
+    note(LINKED, "linked lesson now belongs to acme", client="acme")
+    # main --incremental purges by resolved path; storage must use the same key.
+    indexer.index_files(conn_for, MODEL, [("memory", LINKED.resolve())], [str(LINKED.resolve())])
+    assert "linked.md" not in paths_in(GEN_DB), paths_in(GEN_DB)
+    assert "linked.md" in paths_in(ACME_DB)
+
+
+def test_orphan_client_index_detected():
+    orphan = TMP / "index.client-gone.sqlite"
+    backup = TMP / "index.client-acme.backup-1.sqlite"
+    orphan.touch(); backup.touch()
+    try:
+        assert indexer.orphan_client_indexes() == [orphan], indexer.orphan_client_indexes()
+    finally:
+        orphan.unlink(); backup.unlink()
+
+
 def test_slug_cannot_escape_root():
     try:
         config._load_clients({"../evil": {}})
@@ -182,9 +240,17 @@ if __name__ == "__main__":
     order = ["test_routing", "test_unknown_client_is_skipped_not_general", "test_no_active_client_reads_general_only",
              "test_active_client_sees_own_layer_never_other", "test_tool_cwd_argument_cannot_switch_client",
              "test_env_override_and_fail_closed", "test_note_changing_layer_leaves_old_index",
-             "test_sessions_route_by_recorded_cwd", "test_slug_cannot_escape_root"]
-    for name in order:
-        globals()[name]()
-        print(f"ok  {name}")
+             "test_sessions_route_by_recorded_cwd", "test_slug_cannot_escape_root",
+             "test_frontmatter_variants_fail_closed", "test_roots_and_db_validation",
+             "test_case_insensitive_roots", "test_symlinked_glob_layer_move", "test_orphan_client_index_detected"]
+    try:
+        for name in order:
+            globals()[name]()
+            print(f"ok  {name}")
+    finally:
+        os.chdir(Path(__file__).resolve().parent)
+        for c in CONNS.values():
+            c.close()
+        shutil.rmtree(TMP, ignore_errors=True)
     assert len(order) == len(tests), "update the ordered list"
     print(f"\n{len(order)} passed")

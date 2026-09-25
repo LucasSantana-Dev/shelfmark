@@ -138,9 +138,25 @@ def _load_clients(raw: object) -> dict[str, dict]:
         if not _SLUG_RE.match(slug) or slug == "none":
             raise SystemExit(f"shelfmark: invalid client slug {slug!r} (use a-z, 0-9, '-'; 'none' is reserved)")
         spec = spec if isinstance(spec, dict) else {}
-        roots = [Path(_expand(r)).resolve() for r in spec.get("roots", []) or []]
+        raw_roots = spec.get("roots") or []
+        # A bare string would iterate per character and make "/" a root.
+        if not isinstance(raw_roots, list) or not all(isinstance(r, str) for r in raw_roots):
+            raise SystemExit(f"shelfmark: clients.{slug}.roots must be a list of paths")
+        roots = [Path(_expand(r)).resolve() for r in raw_roots]
+        for root in roots:
+            if root == Path(root.anchor) or root == Path.home().resolve():
+                raise SystemExit(f"shelfmark: clients.{slug}.roots may not be {root} (would claim everything)")
+            if not root.exists():
+                print(f"shelfmark: warning: clients.{slug} root does not exist: {root}", file=sys.stderr)
         db = Path(_expand(spec["db"])) if spec.get("db") else ROOT / f"index.client-{slug}.sqlite"
         out[slug] = {"roots": roots, "db": db}
+    # Two layers in one file would merge them silently.
+    seen = {DB.resolve(): "general"}
+    for slug, spec in out.items():
+        key = spec["db"].resolve()
+        if key in seen:
+            raise SystemExit(f"shelfmark: clients.{slug}.db collides with {seen[key]}'s index ({spec['db']})")
+        seen[key] = slug
     return out
 
 
@@ -151,13 +167,19 @@ def client_db(slug: str) -> Path:
     return CLIENTS[slug]["db"]
 
 
+# macOS and Windows file systems are case-insensitive by default, and resolve()
+# does not canonicalize case: "/x/ACME/a.md" must still match root "/x/acme".
+_fold = str.casefold if sys.platform in ("darwin", "win32") else (lambda s: s)
+
+
 def client_for_path(path: Path | str) -> str | None:
     """Client whose roots contain path (deepest root wins), else None."""
-    p = Path(path).resolve()
+    p = _fold(str(Path(path).resolve()))
     best: tuple[int, str] | None = None
     for slug, spec in CLIENTS.items():
         for root in spec["roots"]:
-            if p == root or root in p.parents:
+            r = _fold(str(root))
+            if p == r or p.startswith(r.rstrip(os.sep) + os.sep):
                 depth = len(root.parts)
                 if best is None or depth > best[0]:
                     best = (depth, slug)
