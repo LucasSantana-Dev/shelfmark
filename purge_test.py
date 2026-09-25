@@ -20,23 +20,29 @@ os.environ["RAG_HOME"] = str(TMP)
 os.environ["RAG_SOURCES"] = str(TMP / "sources.yaml")
 os.environ.pop("RAG_CLIENT", None)
 
-NOTES, ACME, BETA = TMP / "notes", TMP / "acme", TMP / "beta"
-for d in (NOTES, ACME, BETA):
+NOTES, ACME, BETA, GAMMA = TMP / "notes", TMP / "acme", TMP / "beta", TMP / "gamma"
+SESS = TMP / "sessions"
+for d in (NOTES, ACME / "acme-app", BETA, GAMMA, SESS):
     d.mkdir(parents=True)
 (TMP / "sources.yaml").write_text(textwrap.dedent(f"""\
+    repos: ["{ACME}/acme-app"]
     sources:
       - {{type: memory, glob: "{NOTES}/**/*.md"}}
       - {{type: memory, glob: "{ACME}/**/*.md"}}
       - {{type: memory, glob: "{BETA}/**/*.md"}}
+      - {{type: memory, glob: "{GAMMA}/**/*.md"}}
     clients:
       acme:
         roots: ["{ACME}"]
       beta:
         roots: ["{BETA}"]
+      gamma:
+        roots: ["{GAMMA}"]
     """))
 (NOTES / "general.md").write_text("# general\n\nrollback lesson kept forever: always keep a tested rollback path\n")
 (ACME / "rule.md").write_text("# rule\n\nacme walrus billing rule: invoices are charged on the fifth of each month\n")
 (ACME / "lesson.md").write_text("---\nclient: none\n---\n# lesson\n\nidempotent retry lesson learned at acme\n")
+(GAMMA / "g.md").write_text("# g\n\ngamma client notes long enough to be indexed as a chunk\n")
 (BETA / "b.md").write_text("# b\n\nbeta zebra pricing tiers are confidential and change every quarter\n")
 LEXICON = TMP / "acme-terms.txt"
 LEXICON.write_text("# acme canaries\nwalrus\n")
@@ -83,12 +89,21 @@ def digest(files) -> str:
 build()
 GEN, ACME_DB, BETA_DB = config.DB, config.client_db("acme"), config.client_db("beta")
 
-# Simulate a pre-layers index: an acme chunk sitting in general and in a general backup.
+# Simulate a pre-layers index: acme knowledge sitting in general (a note, a
+# commit of its repo, a session recorded in its root) and in a general backup.
+(SESS / "acme-session.jsonl").write_text('{"cwd": "%s", "message": {"content": "walrus chat"}}\n' % ACME)
+(SESS / "general-session.jsonl").write_text('{"cwd": "%s", "message": {"content": "rollback chat"}}\n' % TMP)
+_zero = np.zeros(config.DIM, dtype=np.float32).tobytes()
 _conn = sqlite3.connect(GEN)
-_conn.execute(
+_conn.executemany(
     "INSERT INTO chunks (source_type, repo, language, symbol, path, start_line, end_line, text, file_sha, mtime, embedding) "
-    "VALUES ('memory', NULL, NULL, NULL, ?, 1, 2, 'acme walrus billing rule leaked', 'x', 0, ?)",
-    (str(ACME / "rule.md"), np.zeros(config.DIM, dtype=np.float32).tobytes()),
+    "VALUES (?, ?, NULL, NULL, ?, 1, 2, ?, 'x', 0, ?)",
+    [
+        ("memory", None, str(ACME / "rule.md"), "acme walrus billing rule leaked", _zero),
+        ("commit", "acme-app", "git:acme-app@abc1234", "fix walrus invoice rounding", _zero),
+        ("session", None, str(SESS / "acme-session.jsonl"), "walrus chat", _zero),
+        ("session", None, str(SESS / "general-session.jsonl"), "rollback chat kept", _zero),
+    ],
 )
 _conn.commit()
 _conn.close()
@@ -123,11 +138,19 @@ def test_apply_requires_archive_decision():
 
 def test_purge_acme():
     assert "rule.md" in paths(GEN)  # the planted residue
+    (ACME / "lesson.md").unlink()  # the lesson's source is gone; the index remembers it was general
+    (TMP / "index.client-acme.corrupt-1").write_bytes(b"walrus corrupt copy")
+    (TMP / "weekly.md").write_text("top query: walrus billing?\n")
     assert purge.main(["acme", "--apply", "--no-archive", "--lexicon", str(LEXICON)]) == 0
     assert not ACME_DB.exists()
     assert not list(TMP.glob("index.client-acme.backup-*"))
     assert "rule.md" not in paths(GEN)
     assert "lesson.md" in paths(GEN), "harvested client: none lesson must survive the purge"
+    assert "acme-app@abc1234" not in paths(GEN), "commit of the client's repo is residue"
+    assert "acme-session.jsonl" not in paths(GEN), "session recorded in the client's root is residue"
+    assert "general-session.jsonl" in paths(GEN), "unrelated session untouched"
+    assert not (TMP / "index.client-acme.corrupt-1").exists()
+    assert not (TMP / "weekly.md").exists()
     assert "general.md" in paths(GEN)
     assert not (TMP / "index.backup-1.sqlite").exists(), "general backup holding residue must go"
     assert list(TMP.glob("index.backup-*.sqlite")), "a fresh clean general backup must exist"
@@ -150,6 +173,34 @@ def test_tombstone_blocks_general_routing_once_client_removed():
         config.CLIENTS["acme"] = spec
 
 
+def test_partial_failure_then_rerun():
+    real = purge.scrub
+    calls = []
+
+    def boom(*a, **k):
+        calls.append(a)
+        raise RuntimeError("simulated: database is locked")
+
+    # Plant gamma residue in general so apply() has a scrub to fail on.
+    conn = sqlite3.connect(GEN)
+    conn.execute(
+        "INSERT INTO chunks (source_type, repo, language, symbol, path, start_line, end_line, text, file_sha, mtime, embedding) "
+        "VALUES ('memory', NULL, NULL, NULL, ?, 1, 2, 'gamma leaked', 'x', 0, ?)",
+        (str(GAMMA / "g.md"), np.zeros(config.DIM, dtype=np.float32).tobytes()),
+    )
+    conn.commit()
+    conn.close()
+    purge.scrub = boom
+    try:
+        assert purge.main(["gamma", "--apply", "--no-archive"]) == 1
+    finally:
+        purge.scrub = real
+    assert calls, "the simulated failure must have been hit"
+    assert purge.tombstone_path("gamma").exists(), "tombstone must exist before anything is deleted"
+    assert purge.main(["gamma", "--apply", "--no-archive"]) == 0
+    assert "g.md" not in paths(GEN)
+
+
 def test_archive_is_recoverable():
     if not (shutil.which("age") and shutil.which("age-keygen")):
         print("    (age not installed: archive test skipped)")
@@ -169,7 +220,8 @@ def test_archive_is_recoverable():
 
 if __name__ == "__main__":
     order = ["test_dry_run_changes_nothing", "test_apply_requires_archive_decision", "test_purge_acme",
-             "test_tombstone_blocks_general_routing_once_client_removed", "test_archive_is_recoverable"]
+             "test_tombstone_blocks_general_routing_once_client_removed",
+             "test_partial_failure_then_rerun", "test_archive_is_recoverable"]
     assert len(order) == len([k for k in globals() if k.startswith("test_")]), "update the ordered list"
     try:
         for name in order:
