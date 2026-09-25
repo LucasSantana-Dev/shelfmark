@@ -217,7 +217,14 @@ clients:
 - A client's data lives only in its file and its `index.client-<slug>.backup-*`
   snapshots. Removing a client from `sources.yaml` while its file still exists
   stops the next build (its untagged files would otherwise land in general):
-  archive or remove the file and its `sources` globs first.
+  archive or remove the file and its `sources` globs first. The last build's
+  clients are recorded in `$RAG_HOME/clients.json`, so this also holds for a
+  client with a custom `db:` path.
+- Upgrading from a version without client layers: run one full rebuild.
+  Chunks now store the resolved path, and rows written before keep the old
+  spelling until rebuilt.
+- Root matching ignores case on macOS/Windows (`str.casefold`, close to but
+  not exactly the file system's own folding).
 
 ## Contributing
 

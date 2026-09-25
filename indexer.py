@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 import re
 import sqlite3
@@ -477,11 +478,12 @@ def route(path: Path, text: str = "") -> Path | None:
     if text.startswith("---"):
         end = text.find("\n---", 3)
         block = text[3:end] if end != -1 else text[3:]
-        if _CLIENT_KEY_RE.search(block):
-            fm = _parse_frontmatter(text)
-            value = fm.get("client")
-            if value is None and isinstance(fm.get("metadata"), dict):
-                value = fm["metadata"].get("client")
+        fm = _parse_frontmatter(text)
+        meta = fm.get("metadata") if isinstance(fm.get("metadata"), dict) else {}
+        # The YAML parse catches every spelling ("client":, flow maps); the
+        # regex catches a client line in frontmatter that does not parse.
+        if "client" in fm or "client" in meta or _CLIENT_KEY_RE.search(block):
+            value = fm["client"] if "client" in fm else meta.get("client")
             value = value.strip() if isinstance(value, str) else value
             if value == "none":
                 inside = client_for_path(path)
@@ -496,13 +498,40 @@ def route(path: Path, text: str = "") -> Path | None:
     return DB if slug is None else client_db(slug)
 
 
+REGISTRY = ROOT / "clients.json"  # clients as of the last build (custom db paths included)
+
+
 def orphan_client_indexes() -> list[Path]:
-    """index.client-<slug>.sqlite files in ROOT whose slug is not configured."""
+    """Existing index files of clients that are no longer configured: default
+    index.client-<slug>.sqlite in ROOT, plus any custom db the last build knew."""
     known = {spec["db"].resolve() for spec in CLIENTS.values()}
-    return sorted(
-        p for p in ROOT.glob("index.client-*.sqlite")
-        if ".backup-" not in p.name and ".corrupt-" not in p.name and p.resolve() not in known
-    )
+    candidates = {p for p in ROOT.glob("index.client-*.sqlite") if ".backup-" not in p.name}
+    try:
+        for slug, spec in json.loads(REGISTRY.read_text(encoding="utf-8")).items():
+            if slug not in CLIENTS:
+                candidates.add(Path(spec["db"]))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    return sorted(p for p in candidates if p.exists() and p.resolve() not in known)
+
+
+def check_orphans() -> None:
+    orphans = orphan_client_indexes()
+    if orphans:
+        # A client dropped from sources.yaml would otherwise have its untagged
+        # root files routed to GENERAL on this very build. Fail closed.
+        names = ", ".join(str(o) for o in orphans)
+        raise SystemExit(
+            f"shelfmark: orphan client index {names}: its client is no longer in sources.yaml. "
+            "Re-add the client, or archive/remove the file (and its sources globs) before rebuilding."
+        )
+
+
+def write_registry() -> None:
+    REGISTRY.write_text(json.dumps(
+        {slug: {"db": str(spec["db"]), "roots": [str(r) for r in spec["roots"]]} for slug, spec in CLIENTS.items()},
+        indent=2,
+    ))
 
 
 def connect(db: Path = DB) -> sqlite3.Connection:
@@ -680,15 +709,7 @@ def main() -> int:
 
     from sentence_transformers import SentenceTransformer
 
-    orphans = orphan_client_indexes()
-    if orphans:
-        # A client dropped from sources.yaml would otherwise have its untagged
-        # root files routed to GENERAL on this very build. Fail closed.
-        names = ", ".join(str(o) for o in orphans)
-        raise SystemExit(
-            f"shelfmark: orphan client index {names}: its client is no longer in sources.yaml. "
-            "Re-add the client, or archive/remove the file (and its sources globs) before rebuilding."
-        )
+    check_orphans()
 
     model = SentenceTransformer(MODEL_NAME)
     conns: dict[Path, sqlite3.Connection] = {}
@@ -767,6 +788,7 @@ def main() -> int:
     for db in conns:
         conns[db].close()
         backup_db(db)
+    write_registry()
     return 0
 
 

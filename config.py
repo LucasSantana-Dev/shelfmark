@@ -123,6 +123,18 @@ SOURCES: list[tuple[str, str]] = [
 # Loose script globs outside any repo (indexed as workstation-code).
 WORKSTATION_CODE_GLOBS: list[str] = [_expand(g) for g in _raw.get("code_globs", [])]
 
+# macOS and Windows file systems are case-insensitive by default, and resolve()
+# does not canonicalize case: "/x/ACME/a.md" must still match root "/x/acme".
+# (str.casefold approximates the FS rule; exotic foldings like "ß" may differ.)
+_fold = str.casefold if sys.platform in ("darwin", "win32") else (lambda s: s)
+
+
+def _within(child: Path | str, parent: Path | str) -> bool:
+    """child == parent or child under parent, compared as the FS would."""
+    c, p = _fold(str(child)), _fold(str(parent)).rstrip(os.sep)
+    return c == p or c.startswith(p + os.sep)
+
+
 # Slugs become file names: restrict them so a slug can never escape ROOT.
 _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 
@@ -144,16 +156,17 @@ def _load_clients(raw: object) -> dict[str, dict]:
             raise SystemExit(f"shelfmark: clients.{slug}.roots must be a list of paths")
         roots = [Path(_expand(r)).resolve() for r in raw_roots]
         for root in roots:
-            if root == Path(root.anchor) or root == Path.home().resolve():
-                raise SystemExit(f"shelfmark: clients.{slug}.roots may not be {root} (would claim everything)")
+            # A root that contains $HOME or RAG_HOME claims every note and session.
+            if any(_within(guard, root) for guard in (Path.home().resolve(), ROOT.resolve())):
+                raise SystemExit(f"shelfmark: clients.{slug}.roots may not be {root} (contains $HOME or RAG_HOME)")
             if not root.exists():
                 print(f"shelfmark: warning: clients.{slug} root does not exist: {root}", file=sys.stderr)
         db = Path(_expand(spec["db"])) if spec.get("db") else ROOT / f"index.client-{slug}.sqlite"
         out[slug] = {"roots": roots, "db": db}
     # Two layers in one file would merge them silently.
-    seen = {DB.resolve(): "general"}
+    seen = {_fold(str(DB.resolve())): "general"}
     for slug, spec in out.items():
-        key = spec["db"].resolve()
+        key = _fold(str(spec["db"].resolve()))
         if key in seen:
             raise SystemExit(f"shelfmark: clients.{slug}.db collides with {seen[key]}'s index ({spec['db']})")
         seen[key] = slug
@@ -167,19 +180,13 @@ def client_db(slug: str) -> Path:
     return CLIENTS[slug]["db"]
 
 
-# macOS and Windows file systems are case-insensitive by default, and resolve()
-# does not canonicalize case: "/x/ACME/a.md" must still match root "/x/acme".
-_fold = str.casefold if sys.platform in ("darwin", "win32") else (lambda s: s)
-
-
 def client_for_path(path: Path | str) -> str | None:
     """Client whose roots contain path (deepest root wins), else None."""
-    p = _fold(str(Path(path).resolve()))
+    p = Path(path).resolve()
     best: tuple[int, str] | None = None
     for slug, spec in CLIENTS.items():
         for root in spec["roots"]:
-            r = _fold(str(root))
-            if p == r or p.startswith(r.rstrip(os.sep) + os.sep):
+            if _within(p, root):
                 depth = len(root.parts)
                 if best is None or depth > best[0]:
                     best = (depth, slug)

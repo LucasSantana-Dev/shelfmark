@@ -170,7 +170,9 @@ def main() -> int:
     from sentence_transformers import SentenceTransformer
     model = SentenceTransformer(MODEL_NAME)
 
-    from indexer import connect
+    from indexer import check_orphans, connect
+
+    check_orphans()  # a removed client's sessions must not fall back to general
 
     conns = {db: connect(db) for db in all_dbs()}
     for conn in conns.values():

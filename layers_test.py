@@ -186,6 +186,9 @@ def test_frontmatter_variants_fail_closed():
         "---\nclient:\n---\nbody": None,                         # empty: skip
         "---\nclient: beta: x: [\n---\nbody": None,              # unparseable YAML: skip
         "---\nclient: Beta\n---\nbody": None,                    # slugs are lowercase: skip
+        '---\n"client": beta\n---\nbody': beta,                  # quoted key
+        "---\n{client: beta}\n---\nbody": beta,                  # flow mapping
+        "---\nproject:\n  client: beta\n---\nbody": None,       # client line nested elsewhere: skip
         "---\nname: x\n---\nclient: beta in the body": config.DB,  # body text is not frontmatter
     }
     for text, want in cases.items():
@@ -195,7 +198,9 @@ def test_frontmatter_variants_fail_closed():
 
 def test_roots_and_db_validation():
     for bad in ({"x": {"roots": str(NOTES)}}, {"x": {"roots": ["/"]}}, {"x": {"roots": [str(Path.home())]}},
-                {"x": {"db": str(config.DB)}}, {"x": {"db": str(TMP / "d.sqlite")}, "y": {"db": str(TMP / "d.sqlite")}}):
+                {"x": {"roots": [str(Path.home().parent)]}}, {"x": {"roots": [str(TMP)]}},  # contains $HOME / RAG_HOME
+                {"x": {"db": str(config.DB)}}, {"x": {"db": str(TMP / "d.sqlite")}, "y": {"db": str(TMP / "d.sqlite")}},
+                *([{"x": {"db": str(config.DB).upper()}}] if sys.platform in ("darwin", "win32") else [])):
         try:
             config._load_clients(bad)
             raise AssertionError(f"must reject {bad}")
@@ -220,11 +225,21 @@ def test_symlinked_glob_layer_move():
 def test_orphan_client_index_detected():
     orphan = TMP / "index.client-gone.sqlite"
     backup = TMP / "index.client-acme.backup-1.sqlite"
-    orphan.touch(); backup.touch()
+    custom = TMP / "elsewhere" / "old-client.sqlite"  # custom db: only the registry knows it
+    custom.parent.mkdir()
+    for f in (orphan, backup, custom):
+        f.touch()
+    indexer.REGISTRY.write_text(json.dumps({"old": {"db": str(custom), "roots": []}}))
     try:
-        assert indexer.orphan_client_indexes() == [orphan], indexer.orphan_client_indexes()
+        assert indexer.orphan_client_indexes() == sorted([orphan, custom]), indexer.orphan_client_indexes()
+        try:
+            indexer.check_orphans()
+            raise AssertionError("orphans must stop the build")
+        except SystemExit:
+            pass
     finally:
-        orphan.unlink(); backup.unlink()
+        for f in (orphan, backup, custom, indexer.REGISTRY):
+            f.unlink()
 
 
 def test_slug_cannot_escape_root():
