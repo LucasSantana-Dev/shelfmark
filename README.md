@@ -184,6 +184,47 @@ All optional — see `.env.example` for the full list. Highlights:
 | `RAG_RERANK_AUTO` | on | rerank weak/ambiguous queries |
 | `RAG_CODE_RERANK` | off | bge-reranker-v2-m3 for code scopes (+4.9pp, ~2.2GB) |
 | `RAG_QLOG` | off | local query telemetry (powers `report.py`) |
+| `RAG_CLIENT` | from cwd | active client layer; `none` = general only |
+
+### Client layers
+
+If you work for more than one client, keep each client's business knowledge
+out of the index every session reads. Declare clients in `sources.yaml`:
+
+```yaml
+clients:
+  acme:
+    roots: [~/dev/acme-app, ~/notes/acme]
+```
+
+- Files under a client's `roots`, or with `client: acme` in their frontmatter
+  (top level or under `metadata:`), are indexed into that client's own file
+  (`index.client-acme.sqlite`), never the general index. `client: none` keeps a
+  note general even inside a root (logged at index time). Once a `client` key
+  is present, anything else (unknown slug, list, empty, broken YAML) skips the
+  file instead of sending it to general.
+- A query reads the general index plus the **active** client's file only. The
+  active client comes from the process (`RAG_CLIENT`, or the process cwd under
+  a client root), never from a tool-call argument, so an agent cannot switch
+  itself into another client's layer.
+- Session transcripts are routed by the cwd they recorded. Known limit: a
+  session started outside every client root that then reads a client's files
+  is indexed as general. Start client sessions inside the client's root, or
+  leave `session_chunker.py` off.
+- BM25 is scored per file, so one client's vocabulary never shapes another's
+  term statistics; results are then ranked together. With no clients declared,
+  ranking is unchanged.
+- A client's data lives only in its file and its `index.client-<slug>.backup-*`
+  snapshots. Removing a client from `sources.yaml` while its file still exists
+  stops the next build (its untagged files would otherwise land in general):
+  archive or remove the file and its `sources` globs first. The last build's
+  clients are recorded in `$RAG_HOME/clients.json`, so this also holds for a
+  client with a custom `db:` path.
+- Upgrading from a version without client layers: run one full rebuild.
+  Chunks now store the resolved path, and rows written before keep the old
+  spelling until rebuilt.
+- Root matching ignores case on macOS/Windows (`str.casefold`, close to but
+  not exactly the file system's own folding).
 
 ## Contributing
 

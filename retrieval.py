@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 from rank_bm25 import BM25Okapi
 
-from config import DB, DIM, MODEL_NAME, QLOG, ROOT
+from config import DIM, MODEL_NAME, QLOG, ROOT, all_dbs, query_dbs
 from config import CURATED_REPOS as REPO_ROOTS
 
 RRF_K = 60
@@ -47,12 +47,15 @@ _cache: dict[tuple, tuple[list[dict], np.ndarray, BM25Okapi]] = {}
 _cache_db_stamp: tuple[float, int] | None = None
 
 
-def _db_stamp() -> tuple[float, int]:
-    try:
-        st = os.stat(DB)
-        return (st.st_mtime, st.st_size)
-    except OSError:
-        return (0.0, 0)
+def _db_stamp() -> tuple:
+    stamps = []
+    for db in all_dbs():
+        try:
+            st = os.stat(db)
+            stamps.append((st.st_mtime, st.st_size))
+        except OSError:
+            stamps.append((0.0, 0))
+    return tuple(stamps)
 # Reranker model. Override with RAG_RERANK_MODEL env var.
 # Default kept on ms-marco-MiniLM-L-6-v2 (lightweight, fast, no download
 # needed — already cached). Swap to "BAAI/bge-reranker-v2-m3" for +5-10pp
@@ -164,7 +167,7 @@ def cwd_repo(cwd: str | None = None) -> str | None:
     return None
 
 
-def _load(scope_types: list[str] | None, scope_repos: list[str] | None) -> tuple:
+def _load(db: Path, scope_types: list[str] | None, scope_repos: list[str] | None) -> tuple:
     global _cache_db_stamp
     stamp = _db_stamp()
     if _cache_db_stamp is None:
@@ -179,6 +182,7 @@ def _load(scope_types: list[str] | None, scope_repos: list[str] | None) -> tuple
                 print("rag-index: index.sqlite changed; corpus cache invalidated",
                       file=sys.stderr)
     key = (
+        str(db),
         tuple(sorted(scope_types)) if scope_types else None,
         tuple(sorted(scope_repos)) if scope_repos else None,
     )
@@ -187,11 +191,16 @@ def _load(scope_types: list[str] | None, scope_repos: list[str] | None) -> tuple
     with _loader_lock:
         if key in _cache:  # re-check: prewarm thread may have filled it while we waited
             return _cache[key]
-        return _load_uncached(key, scope_types, scope_repos)
+        return _load_uncached(key, db, scope_types, scope_repos)
 
 
-def _load_uncached(key: tuple, scope_types: list[str] | None, scope_repos: list[str] | None) -> tuple:
-    conn = sqlite3.connect(DB, timeout=10)
+def _load_uncached(key: tuple, db: Path, scope_types: list[str] | None, scope_repos: list[str] | None) -> tuple:
+    if not db.exists():
+        # A configured client layer that was never built (or was purged) is an
+        # empty layer. Never let the read path create the file.
+        _cache[key] = ([], np.zeros((0, DIM), dtype=np.float32), BM25Okapi([[""]]))
+        return _cache[key]
+    conn = sqlite3.connect(db, timeout=10)
     conn.execute("PRAGMA busy_timeout=10000")  # WAL+timeout hardening (WAL set by writer)
     where: list[str] = []
     params: list[Any] = []
@@ -263,22 +272,96 @@ def search(
         detected = cwd_repo(cwd)
         if detected:
             scope_repos = [detected]
-    meta, embs, bm25 = _load(scope_types, scope_repos)
-    if not meta:
+    # Layers come from the process (config.active_client), never from `cwd`:
+    # `cwd` is a tool-call argument and only drives repo auto-scoping above.
+    layers = [_load(db, scope_types, scope_repos) for db in query_dbs()]
+    if not any(layer[0] for layer in layers):
         return []
 
-    # Cosine
     # E5 model requires "query: " prefix for queries
     prefixed_query = f"query: {query}"
     qv = _get_model().encode(
         [prefixed_query], normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=False
     ).astype(np.float32)[0]
-    cos = embs @ qv
-    cos_order = np.argsort(-cos)
-
-    # BM25
     q_tokens = _tokenize(query)
-    bm_scores = bm25.get_scores(q_tokens) if q_tokens else np.zeros(len(meta))
+
+    # BM25 is scored per index file (its own term statistics, so one layer's
+    # vocabulary never shapes another's IDF), but cosine and BM25 are then
+    # RANKED globally before fusion. Fusing per-layer rankings instead gave a
+    # small layer's rank-1 the same score as the big layer's rank-1 and cost
+    # -3.2pp hit@5 on the golden set. With a single DB this is exactly the
+    # previous single-corpus ranking.
+    meta: list[dict] = []
+    emb_parts: list[np.ndarray] = []
+    bm_parts: list[np.ndarray] = []
+    for layer_meta, layer_embs, layer_bm25 in layers:
+        if not layer_meta:
+            continue
+        meta.extend(layer_meta)
+        emb_parts.append(layer_embs)
+        bm_parts.append(layer_bm25.get_scores(q_tokens) if q_tokens else np.zeros(len(layer_meta)))
+    cos = np.concatenate(emb_parts) @ qv
+    bm_scores = np.concatenate(bm_parts)
+    cos_order = np.argsort(-cos)
+    cos_scores_for_ranking = _fuse(query, meta, cos, cos_order, bm_scores, top)
+
+    rerank = _decide_rerank(rerank, scope_types, cos, cos_order)
+
+    if rerank:
+        candidate_k = min(len(meta), max(top * 4, 20))
+        candidate_order = sorted(cos_scores_for_ranking.items(), key=lambda kv: -kv[1])[:candidate_k]
+        pairs = [(query, meta[idx]["text"][:1500]) for idx, _ in candidate_order]
+        try:
+            ce_scores = _get_reranker().predict(pairs, show_progress_bar=False)
+            reranked = sorted(
+                zip(candidate_order, ce_scores), key=lambda x: -float(x[1])
+            )[:top]
+            fused = [(idx_score[0][0], float(idx_score[1])) for idx_score in reranked]
+        except Exception as e:
+            # Reranker unavailable (e.g. the code-rerank model isn't cached on this machine) ->
+            # fall back to the fused ranking instead of failing the query. Keeps machines without
+            # the 2.2GB model working at the floor. (ADR 0011)
+            print(f"WARN: reranker unavailable, using fused ranking: {e}", file=sys.stderr)
+            fused = sorted(cos_scores_for_ranking.items(), key=lambda kv: -kv[1])[:top]
+    else:
+        fused = sorted(cos_scores_for_ranking.items(), key=lambda kv: -kv[1])[:top]
+
+    results: list[dict] = []
+    for rank, (idx, score) in enumerate(fused, 1):
+        m = meta[idx]
+        results.append(
+            {
+                "rank": rank,
+                "rrf": round(float(score), 4),
+                "cos": round(float(cos[idx]), 3),
+                "bm25": round(float(bm_scores[idx]), 2),
+                "reranked": rerank,
+                "source_type": m["source_type"],
+                "repo": m["repo"],
+                "language": m["language"],
+                "symbol": m["symbol"],
+                "path": m["path"],
+                "start_line": m["start_line"],
+                "end_line": m["end_line"],
+                "text": m["text"],
+            }
+        )
+    # Query telemetry (local sqlite, powers report.py). Default OFF in the
+    # public distribution — opt in with RAG_QLOG=on.
+    if os.environ.get("RAG_QLOG", "off").lower() in ("on", "1", "true"):
+        _log_query(query, scope_types, scope_repos, cwd, rerank, results)
+    return results
+
+
+def _fuse(
+    query: str,
+    meta: list[dict],
+    cos: np.ndarray,
+    cos_order: np.ndarray,
+    bm_scores: np.ndarray,
+    top: int,
+) -> dict[int, float]:
+    """Fuse cosine and BM25 rankings (RRF) plus symbol/recency priors."""
     bm_order = np.argsort(-bm_scores)
 
     # Retrieval: hybrid BM25+cosine via Reciprocal Rank Fusion OR pure cosine
@@ -319,76 +402,35 @@ def search(
     else:
         # Cosine-only: rank by cosine similarity
         cos_scores_for_ranking = {int(idx): float(cos[idx]) for idx in range(len(cos))}
+    return cos_scores_for_ranking
 
-    if rerank is None:
-        rerank = os.environ.get("RAG_RERANK", "off").lower() in ("on", "1", "true")
-        # Rerank-eligible scopes = code (ADR-0011) + standards (2026-06-21 benchmark: rerank lifts
-        # standards +14pp, hit@5 0.43->0.57). Gate on EVERY scoped type being rerank-friendly, so a
-        # MIXED query that also includes memory never reranks: reranking memory regressed -10.5pp
-        # (memory 0.921 -> 0.816 on the rerank=None path, ADR-0011). Hence search_knowledge
-        # (memory+standards+plans+handoffs+adrs) stays un-reranked & protected, while a
-        # standards-only or code-only rag_query reranks.
-        is_rerank_scope = bool(scope_types) and all(
-            any(rs in s for rs in ("code", "standards")) for s in scope_types
-        )
-        # Auto-trigger rerank on weak/ambiguous queries (if not explicitly disabled). In default
-        # (ms-marco) mode, auto-rerank fires on any scope (net-positive there).
-        auto_allowed = RERANK_AUTO and (not RAG_CODE_RERANK or is_rerank_scope)
-        if not rerank and auto_allowed:
-            top1 = float(cos[cos_order[0]]) if len(cos_order) > 0 else 0.0
-            top2 = float(cos[cos_order[1]]) if len(cos_order) > 1 else 0.0
-            if top1 < RERANK_AUTO_THRESHOLD or (top1 - top2) < RERANK_AUTO_MARGIN:
-                rerank = True
-        # Selective rerank (ADR 0011 + 2026-06-21 benchmark): the fused ranking is weakest for
-        # code and standards; rerank them when scope is restricted to those (memory excluded).
-        if not rerank and RAG_CODE_RERANK and is_rerank_scope:
+
+def _decide_rerank(rerank: bool | None, scope_types: list[str] | None, cos: np.ndarray, cos_order: np.ndarray) -> bool:
+    if rerank is not None:
+        return rerank
+    rerank = os.environ.get("RAG_RERANK", "off").lower() in ("on", "1", "true")
+    # Rerank-eligible scopes = code (ADR-0011) + standards (2026-06-21 benchmark: rerank lifts
+    # standards +14pp, hit@5 0.43->0.57). Gate on EVERY scoped type being rerank-friendly, so a
+    # MIXED query that also includes memory never reranks: reranking memory regressed -10.5pp
+    # (memory 0.921 -> 0.816 on the rerank=None path, ADR-0011). Hence search_knowledge
+    # (memory+standards+plans+handoffs+adrs) stays un-reranked & protected, while a
+    # standards-only or code-only rag_query reranks.
+    is_rerank_scope = bool(scope_types) and all(
+        any(rs in s for rs in ("code", "standards")) for s in scope_types
+    )
+    # Auto-trigger rerank on weak/ambiguous queries (if not explicitly disabled). In default
+    # (ms-marco) mode, auto-rerank fires on any scope (net-positive there).
+    auto_allowed = RERANK_AUTO and (not RAG_CODE_RERANK or is_rerank_scope)
+    if not rerank and auto_allowed:
+        top1 = float(cos[cos_order[0]]) if len(cos_order) > 0 else 0.0
+        top2 = float(cos[cos_order[1]]) if len(cos_order) > 1 else 0.0
+        if top1 < RERANK_AUTO_THRESHOLD or (top1 - top2) < RERANK_AUTO_MARGIN:
             rerank = True
-
-    if rerank:
-        candidate_k = min(len(meta), max(top * 4, 20))
-        candidate_order = sorted(cos_scores_for_ranking.items(), key=lambda kv: -kv[1])[:candidate_k]
-        pairs = [(query, meta[idx]["text"][:1500]) for idx, _ in candidate_order]
-        try:
-            ce_scores = _get_reranker().predict(pairs, show_progress_bar=False)
-            reranked = sorted(
-                zip(candidate_order, ce_scores), key=lambda x: -float(x[1])
-            )[:top]
-            fused = [(idx_score[0][0], float(idx_score[1])) for idx_score in reranked]
-        except Exception as e:
-            # Reranker unavailable (e.g. the code-rerank model isn't cached on this machine) ->
-            # fall back to the fused ranking instead of failing the query. Keeps machines without
-            # the 2.2GB model working at the floor. (ADR 0011)
-            import sys
-            print(f"WARN: reranker unavailable, using fused ranking: {e}", file=sys.stderr)
-            fused = sorted(cos_scores_for_ranking.items(), key=lambda kv: -kv[1])[:top]
-    else:
-        fused = sorted(cos_scores_for_ranking.items(), key=lambda kv: -kv[1])[:top]
-
-    results: list[dict] = []
-    for rank, (idx, score) in enumerate(fused, 1):
-        m = meta[idx]
-        results.append(
-            {
-                "rank": rank,
-                "rrf": round(float(score), 4),
-                "cos": round(float(cos[idx]), 3),
-                "bm25": round(float(bm_scores[idx]), 2),
-                "reranked": rerank,
-                "source_type": m["source_type"],
-                "repo": m["repo"],
-                "language": m["language"],
-                "symbol": m["symbol"],
-                "path": m["path"],
-                "start_line": m["start_line"],
-                "end_line": m["end_line"],
-                "text": m["text"],
-            }
-        )
-    # Query telemetry (local sqlite, powers report.py). Default OFF in the
-    # public distribution — opt in with RAG_QLOG=on.
-    if os.environ.get("RAG_QLOG", "off").lower() in ("on", "1", "true"):
-        _log_query(query, scope_types, scope_repos, cwd, rerank, results)
-    return results
+    # Selective rerank (ADR 0011 + 2026-06-21 benchmark): the fused ranking is weakest for
+    # code and standards; rerank them when scope is restricted to those (memory excluded).
+    if not rerank and RAG_CODE_RERANK and is_rerank_scope:
+        rerank = True
+    return rerank
 
 
 def _log_query(
