@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 from rank_bm25 import BM25Okapi
 
-from config import DIM, MODEL_NAME, QLOG, ROOT, all_dbs, query_dbs
+from config import DIM, MODEL_NAME, QLOG, ROOT, active_client, all_dbs, query_dbs
 from config import CURATED_REPOS as REPO_ROOTS
 
 RRF_K = 60
@@ -448,13 +448,19 @@ def _log_query(
             """CREATE TABLE IF NOT EXISTS queries (
                 ts REAL NOT NULL,
                 cwd TEXT, query TEXT, scope_types TEXT, scope_repos TEXT,
-                rerank INTEGER, top_score REAL, top_path TEXT, n_results INTEGER
+                rerank INTEGER, top_score REAL, top_path TEXT, n_results INTEGER,
+                client TEXT
             )"""
         )
+        # Pre-layers logs lack the column. The active client is recorded so a
+        # client purge can drop its rows even when cwd was outside its roots.
+        if "client" not in {r[1] for r in conn.execute("PRAGMA table_info(queries)")}:
+            conn.execute("ALTER TABLE queries ADD COLUMN client TEXT")
         top_score = float(results[0]["cos"]) if results else 0.0
         top_path = results[0]["path"] if results else ""
         conn.execute(
-            "INSERT INTO queries VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO queries (ts, cwd, query, scope_types, scope_repos, rerank, top_score, top_path, n_results, client) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
                 __import__("time").time(),
                 cwd or _safe_cwd(),
@@ -465,6 +471,7 @@ def _log_query(
                 top_score,
                 top_path,
                 len(results),
+                active_client(),
             ),
         )
         conn.commit()

@@ -226,6 +226,24 @@ clients:
 - Root matching ignores case on macOS/Windows (`str.casefold`, close to but
   not exactly the file system's own folding).
 
+To offboard a client, purge before removing it from `sources.yaml`:
+
+```bash
+shelfmark-purge acme --lexicon acme-terms.txt                       # dry run: what would go
+shelfmark-purge acme --apply --archive age1... --lexicon acme-terms.txt
+```
+
+The purge streams the client's index, its backups and its query-log rows into
+one [age](https://age-encryption.org)-encrypted archive (never plaintext on
+disk). Then it deletes them and scrubs any residue of the client from the
+general index and its backups with `secure_delete` + `VACUUM`, so nothing
+survives in free pages or the WAL. It then checks that the lexicon's canary
+terms appear nowhere in the raw bytes of what remains. Notes under the
+client's roots tagged `client: none` (lessons you decided are general) are
+kept. `--no-archive` deletes without an archive. A tombstone keeps later
+builds from routing the client's files into general if its globs stay.
+Source files are never touched.
+
 ## Contributing
 
 Issues and PRs welcome — especially a real cross-tool benchmark (see [How it

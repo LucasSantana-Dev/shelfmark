@@ -70,7 +70,7 @@ def _is_card_path(path) -> bool:
     return any(pat in n for pat in CARD_ONLY_PATH_PATTERNS)
 
 from config import CLIENTS, CURATED_REPOS, DB, MODEL_NAME, ROOT, WORKSTATION_CODE_GLOBS
-from config import all_dbs, client_db, client_for_path
+from config import all_dbs, client_db, client_for_path, purged_client_for_path
 from config import SOURCES as _CONFIG_SOURCES
 
 HOME = Path.home()
@@ -161,7 +161,8 @@ CREATE TABLE IF NOT EXISTS chunks (
     text TEXT NOT NULL,
     file_sha TEXT NOT NULL,
     mtime REAL NOT NULL,
-    embedding BLOB NOT NULL
+    embedding BLOB NOT NULL,
+    layer TEXT
 );
 CREATE INDEX IF NOT EXISTS chunks_path ON chunks(path);
 CREATE INDEX IF NOT EXISTS chunks_type ON chunks(source_type);
@@ -228,6 +229,9 @@ def collect_commit_chunks() -> list[dict]:
     for repo in CURATED_REPOS:
         if not (repo / ".git").exists():
             continue
+        db = route(repo)
+        if db is None:
+            continue  # repo of a purged client still listed in repos:
         try:
             proc = subprocess.run(
                 [
@@ -272,7 +276,7 @@ def collect_commit_chunks() -> list[dict]:
                     "sha": sha,
                     "mtime": 0.0,
                     "meta": f"{author} · {date_str}",
-                    "db": route(repo),
+                    "db": db,
                 }
             )
     return rows
@@ -495,6 +499,10 @@ def route(path: Path, text: str = "") -> Path | None:
             print(f"skip (unroutable client {value!r}): {path}", file=sys.stderr)
             return None
     slug = client_for_path(path)
+    purged = purged_client_for_path(path) if slug is None else None
+    if purged:
+        print(f"skip (under purged client {purged!r}; remove its globs): {path}", file=sys.stderr)
+        return None
     return DB if slug is None else client_db(slug)
 
 
@@ -553,6 +561,11 @@ def connect(db: Path = DB) -> sqlite3.Connection:
     conn = sqlite3.connect(db, timeout=10)
     conn.execute("PRAGMA journal_mode=WAL"); conn.execute("PRAGMA busy_timeout=10000")  # WAL+timeout hardening
     conn.executescript(SCHEMA)
+    # layer='none' marks a general row that came from inside a client root via
+    # an explicit `client: none` (a harvested lesson). Recorded at index time so
+    # a purge can keep it even after the source file is gone.
+    if "layer" not in {r[1] for r in conn.execute("PRAGMA table_info(chunks)")}:
+        conn.execute("ALTER TABLE chunks ADD COLUMN layer TEXT")
     return conn
 
 
@@ -659,6 +672,7 @@ def index_files(
                     "text": body[:4000],
                     "sha": sha,
                     "mtime": mtime,
+                    "layer": "none" if db == DB and client_for_path(path) else None,
                 }
             )
             if len(batch_texts) >= 64:
@@ -692,11 +706,12 @@ def _flush(conn, model, texts, meta):
                 m["sha"],
                 m["mtime"],
                 vec.tobytes(),
+                m.get("layer"),
             )
         )
     conn.executemany(
-        "INSERT INTO chunks (source_type, repo, language, symbol, path, start_line, end_line, text, file_sha, mtime, embedding) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO chunks (source_type, repo, language, symbol, path, start_line, end_line, text, file_sha, mtime, embedding, layer) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         rows,
     )
 
