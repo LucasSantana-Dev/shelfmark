@@ -70,7 +70,7 @@ def _is_card_path(path) -> bool:
     return any(pat in n for pat in CARD_ONLY_PATH_PATTERNS)
 
 from config import CLIENTS, CURATED_REPOS, DB, MODEL_NAME, ROOT, WORKSTATION_CODE_GLOBS
-from config import all_dbs, client_db, client_for_path
+from config import all_dbs, client_db, client_for_path, purged_client_for_path
 from config import SOURCES as _CONFIG_SOURCES
 
 HOME = Path.home()
@@ -495,6 +495,9 @@ def route(path: Path, text: str = "") -> Path | None:
             print(f"skip (unroutable client {value!r}): {path}", file=sys.stderr)
             return None
     slug = client_for_path(path)
+    if slug is None and purged_client_for_path(path):
+        print(f"skip (under purged client {purged_client_for_path(path)!r}; remove its globs): {path}", file=sys.stderr)
+        return None
     return DB if slug is None else client_db(slug)
 
 

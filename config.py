@@ -26,6 +26,7 @@ Import from here; never hardcode paths in engine modules.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
@@ -191,6 +192,25 @@ def client_for_path(path: Path | str) -> str | None:
                 if best is None or depth > best[0]:
                     best = (depth, slug)
     return best[1] if best else None
+
+
+def purged_client_for_path(path: Path | str) -> str | None:
+    """A purged client (tombstone in ROOT, no longer configured) whose roots
+    contain path. Its files must never be routed to general by default."""
+    p = _fold(str(Path(path).resolve()))
+    for stone in ROOT.glob("index.client-*.purged"):
+        try:
+            data = json.loads(stone.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        slug = data.get("client")
+        if slug in CLIENTS:
+            continue  # re-onboarded: normal routing applies
+        for root in data.get("roots", []):
+            r = _fold(str(root))
+            if p == r or p.startswith(r.rstrip(os.sep) + os.sep):
+                return slug
+    return None
 
 
 def active_client() -> str | None:

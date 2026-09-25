@@ -74,6 +74,8 @@ jobs:
         run: venv/bin/python diff_pack_test.py
       - name: "Unit tests: client layer isolation"
         run: venv/bin/python layers_test.py
+      - name: "Unit tests: client purge"
+        run: sudo apt-get install -y age >/dev/null 2>&1 || true; venv/bin/python purge_test.py
       - name: Eval harness self-checks
         env:
           HF_HUB_OFFLINE: ${{ steps.hfcache.outputs.cache-hit == 'true' && '1' || '0' }}

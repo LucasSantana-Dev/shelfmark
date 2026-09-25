@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Iterator
 
 from config import CLIENTS, DB as INDEX_DB
-from config import all_dbs, client_db, client_for_path
+from config import all_dbs, client_db, client_for_path, purged_client_for_path
 
 HOME = Path.home()
 # Claude Code session transcripts (JSONL). Point RAG_SESSIONS_DIR elsewhere for
@@ -98,6 +98,8 @@ def iter_session_chunks(days: int) -> Iterator[dict]:
                 break
         if session_cwd:
             slug = client_for_path(session_cwd)
+            if slug is None and purged_client_for_path(session_cwd):
+                continue  # session of a purged client: never general
             db = INDEX_DB if slug is None else client_db(slug)
         elif CLIENTS:
             print(f"[sessions] skip (no cwd recorded, cannot route): {f}", file=sys.stderr)
