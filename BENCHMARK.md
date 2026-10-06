@@ -2,7 +2,7 @@
 
 **Config:** `intfloat/multilingual-e5-small` (384d) + BM25 (code-aware tokenizer), RRF fusion, no reranker (`[FAST]` mode).
 **Corpus:** this repository itself — code + README indexed with `sources.yaml.example` semantics (~120 chunks).
-**Datasets:** `eval/dataset-public.jsonl` (42 cases, train) · `eval/holdout-public.jsonl` (10 cases, frozen — never used for tuning, per `eval/holdout-policy.md`).
+**Datasets:** `eval/dataset-public.jsonl` (42 cases, train) · `eval/holdout-public.jsonl` (10 cases, frozen, split by target file, never used for tuning, per `eval/holdout-policy.md`).
 
 ## Reproduce
 
@@ -18,8 +18,17 @@ RAG_QLOG=off venv/bin/python eval/run.py --dataset eval/holdout-public.jsonl --l
 
 | Set | n | Hit@1 | Hit@3 | Hit@5 | MRR |
 |-----|---|-------|-------|-------|-----|
-| Train | 42 | 0.762 | 0.905 | **0.929** | 0.834 |
-| Holdout (frozen) | 10 | 0.800 | 1.000 | **1.000** | 0.883 |
+| Train | 42 | 0.881 | 0.976 | **0.976** | 0.929 |
+| Holdout (frozen, group split) | 10 | 0.600 | 0.900 | **0.900** | 0.717 |
+
+Re-baselined 2026-10-06. Published holdout numbers before this date (Hit@5
+1.000 / MRR 0.883) used a per-case split, where 8 of 10 holdout cases shared a
+target file with a training case, and are **not comparable**. The holdout is now
+split by target file (no file appears on both sides). **n is still about 10**,
+so the holdout can only detect large effects (roughly 30pp or more); one case
+moves Hit@5 by 10pp. Growing it is a separate follow-up. Train and holdout are
+now disjoint sets of target files, so the two rows differ in difficulty and the
+holdout is not directly a "train minus generalization gap".
 
 Committed baselines: `eval/baseline-public-train.json`, `eval/baseline-public-holdout.json`
 (metrics only). `eval/check.sh` fails at >5pp regression vs a baseline:
