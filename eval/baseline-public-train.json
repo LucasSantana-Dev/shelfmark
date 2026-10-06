@@ -1,16 +1,16 @@
 {
   "n": 42,
-  "mrr": 0.834,
-  "hit@1": 0.762,
-  "hit@3": 0.905,
-  "hit@5": 0.929,
+  "mrr": 0.929,
+  "hit@1": 0.881,
+  "hit@3": 0.976,
+  "hit@5": 0.976,
   "by_scope": {
     "code": {
       "n": 39,
-      "mrr": 0.821,
-      "hit@1": 0.744,
-      "hit@3": 0.897,
-      "hit@5": 0.923
+      "mrr": 0.923,
+      "hit@1": 0.872,
+      "hit@3": 0.974,
+      "hit@5": 0.974
     },
     "repo-readme": {
       "n": 3,
@@ -26,14 +26,14 @@
       "expect": "retrieval.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:241"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:356"
     },
     {
       "query": "reciprocal rank fusion constant value",
       "expect": "retrieval.py",
       "scope": "code",
-      "hit_rank": null,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/sweep.py:75"
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:356"
     },
     {
       "query": "why does memory scope never get reranked",
@@ -43,14 +43,14 @@
       ],
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:241"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:408"
     },
     {
       "query": "auto rerank trigger for weak ambiguous queries threshold margin",
       "expect": "retrieval.py",
       "scope": "code",
-      "hit_rank": null,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/run.py:132"
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:408"
     },
     {
       "query": "what happens when the reranker model is not cached on this machine",
@@ -64,168 +64,133 @@
       "expect": "retrieval.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:167"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:170"
     },
     {
       "query": "recency prior freshness tie-break for memory chunks",
       "expect": "retrieval.py",
       "scope": "code",
-      "hit_rank": null,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/chunkers.py:103"
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:356"
     },
     {
       "query": "fallback when sentence transformer raises embedding_dimension TypeError",
       "expect": "retrieval.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:97"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:100"
     },
     {
       "query": "recover when the server working directory was deleted",
       "expect": "retrieval.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:144"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:147"
     },
     {
       "query": "detect which configured repo the current working directory belongs to",
       "expect": "retrieval.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:155"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:158"
     },
     {
       "query": "query telemetry logging to a local sqlite table",
       "expect": "retrieval.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:394"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:436"
     },
     {
       "query": "E5 passage prefix added at embed time",
       "expect": "indexer.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:495"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:589"
     },
     {
       "query": "contextual chunk prefix with source type repo file symbol",
       "expect": "indexer.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:584"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:692"
     },
     {
       "query": "one concise card instead of full chunks for ephemeral notes",
       "expect": "indexer.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:429"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:436"
     },
     {
       "query": "superseded notes with valid_to removed from the index",
       "expect": "indexer.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:505"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:599"
     },
     {
       "query": "corrupt sqlite index detected and rebuilt fresh",
       "expect": "indexer.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:458"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:545"
     },
     {
       "query": "vacuum backup snapshots keep newest three",
       "expect": "indexer.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:479"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:572"
     },
     {
       "query": "git log commit messages indexed as chunks",
       "expect": "indexer.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:223"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:226"
     },
     {
       "query": "which directories are excluded from code indexing",
       "expect": "indexer.py",
       "scope": "code",
-      "hit_rank": 2,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/sweep.py:166"
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:308"
     },
     {
       "query": "skip repos that have a knowledge graph when embedding code",
       "expect": "indexer.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:135"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:137"
     },
     {
       "query": "yaml frontmatter parsed best effort returning empty dict",
       "expect": "indexer.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:371"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:378"
     },
     {
       "query": "classify a file path into a source type label",
       "expect": "indexer.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:333"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:340"
     },
     {
       "query": "environment variable for the data directory and index location",
       "expect": "config.py",
       "scope": "code",
-      "hit_rank": 3,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:479"
+      "hit_rank": null,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:512"
     },
     {
       "query": "malformed sources yaml raises a clear error",
       "expect": "config.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/config.py:66"
-    },
-    {
-      "query": "split markdown into chunks by heading",
-      "expect": "chunkers.py",
-      "scope": "code",
-      "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/chunkers.py:103"
-    },
-    {
-      "query": "detect programming language from file extension",
-      "expect": "chunkers.py",
-      "scope": "code",
-      "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/chunkers.py:126"
-    },
-    {
-      "query": "typescript regex symbol extraction exports classes interfaces",
-      "expect": "symbols.py",
-      "scope": "code",
-      "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/symbols.py:169"
-    },
-    {
-      "query": "populate call graph tables from indexed chunks",
-      "expect": "populate_symbols.py",
-      "scope": "code",
-      "hit_rank": 5,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/sweep.py:166"
-    },
-    {
-      "query": "index agent session transcripts from jsonl files",
-      "expect": "session_chunker.py",
-      "scope": "code",
-      "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/session_chunker.py:37"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/config.py:89"
     },
     {
       "query": "MCP server prewarm so the first query is not slow",
@@ -239,14 +204,14 @@
       "expect": "mcp_server.py",
       "scope": "code",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/mcp_server.py:141"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/mcp_server.py:142"
     },
     {
       "query": "search knowledge tool searches all repos without cwd scoping",
       "expect": "mcp_server.py",
       "scope": "code",
       "hit_rank": 2,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:241"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:250"
     },
     {
       "query": "truncate per hit text unless full output requested",
@@ -254,13 +219,6 @@
       "scope": "code",
       "hit_rank": 1,
       "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/query.py:24"
-    },
-    {
-      "query": "compute mean reciprocal rank and hit at k metrics",
-      "expect": "eval/run.py",
-      "scope": "code",
-      "hit_rank": 2,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/sweep.py:75"
     },
     {
       "query": "fail the gate when a metric regresses more than five points",
@@ -284,13 +242,6 @@
       "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/eval/case_quality.py:76"
     },
     {
-      "query": "inject top retrieval hits into the agent prompt automatically",
-      "expect": "autorecall-hook.sh",
-      "scope": "code",
-      "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/examples/claude-code/autorecall-hook.sh:1"
-    },
-    {
       "query": "nightly full rebuild with regression alert webhook",
       "expect": "rag-nightly-rebuild.sh",
       "scope": "code",
@@ -312,7 +263,7 @@
       ],
       "scope": "repo-readme",
       "hit_rank": 1,
-      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/README.md:101"
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/README.md:103"
     },
     {
       "query": "how to connect this to Claude Code as an MCP server",
@@ -320,6 +271,58 @@
       "scope": "repo-readme",
       "hit_rank": 1,
       "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/README.md:1"
+    },
+    {
+      "query": "camelCase and snake_case sub-token splitting for search",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:250"
+    },
+    {
+      "query": "double loading of multi gigabyte models prevented by a lock",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:170"
+    },
+    {
+      "query": "symbol definition boost when query mentions an identifier",
+      "expect": "retrieval.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/retrieval.py:356"
+    },
+    {
+      "query": "synthetic purpose chunk from note frontmatter name and description",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 2,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/layers_test.py:47"
+    },
+    {
+      "query": "deduplicate files reached through symlinks during indexing",
+      "expect": "indexer.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:173"
+    },
+    {
+      "query": "where do the curated repo list and markdown globs come from",
+      "expect": [
+        "config.py",
+        "indexer.py"
+      ],
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/indexer.py:137"
+    },
+    {
+      "query": "clamp the top parameter to sane bounds without raising",
+      "expect": "mcp_server.py",
+      "scope": "code",
+      "hit_rank": 1,
+      "top_hit": "/Volumes/External HD/Desenvolvimento/shelfmark/mcp_server.py:119"
     }
   ],
   "excluded_symbol_lookup": 0
