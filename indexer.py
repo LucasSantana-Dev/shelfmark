@@ -530,7 +530,7 @@ def check_orphans() -> None:
         # root files routed to GENERAL on this very build. Fail closed.
         names = ", ".join(str(o) for o in orphans)
         raise SystemExit(
-            f"shelfmark: orphan client index {names}: its client is no longer in sources.yaml. "
+            f"sqlrecall: orphan client index {names}: its client is no longer in sources.yaml. "
             "Re-add the client, or archive/remove the file (and its sources globs) before rebuilding."
         )
 
