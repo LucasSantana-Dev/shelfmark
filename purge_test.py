@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-TMP = Path(tempfile.mkdtemp(prefix="shelfmark-purge-")).resolve()
+TMP = Path(tempfile.mkdtemp(prefix="sqlrecall-purge-")).resolve()
 os.environ["RAG_HOME"] = str(TMP)
 os.environ["RAG_SOURCES"] = str(TMP / "sources.yaml")
 os.environ.pop("RAG_CLIENT", None)

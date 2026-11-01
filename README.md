@@ -1,21 +1,22 @@
-# shelfmark
+# sqlrecall
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/LucasSantana-Dev/shelfmark?style=flat)](https://github.com/LucasSantana-Dev/shelfmark/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/LucasSantana-Dev/sqlrecall?style=flat)](https://github.com/LucasSantana-Dev/sqlrecall/stargazers)
 [![MCP](https://img.shields.io/badge/MCP-server-6b5ce7)](https://modelcontextprotocol.io)
 
-![shelfmark: local hybrid retrieval for agent memory and codebases](.github/shelfmark-card.png)
-
-Local hybrid retrieval for agent memory and codebases. One SQLite file, no
-services, no cloud. BM25 + dense embeddings fused with Reciprocal Rank Fusion,
-an optional cross-encoder reranker, and an MCP server so coding agents
+Agent memory and code recall in one local SQLite file. No services, no cloud.
+BM25 + dense embeddings fused with Reciprocal Rank Fusion, an optional cross-encoder reranker, and an MCP server so coding agents
 (Claude Code, Codex, anything MCP) can recall your notes, decisions, docs, and
 code instead of guessing.
 
-A shelfmark is the code a librarian writes on a book so it can be found again.
-That is the whole product: before your agent answers, the librarian fetches the
-handful of notes and code chunks most likely to matter and puts them on the
-desk.
+Pairs with session-memory tools like
+[ai-memory](https://github.com/akitaonrails/ai-memory): they remember what
+happened, sqlrecall finds what was written down.
+
+> **Formerly `shelfmark`.** Renamed in 1.2.0. `pip install sqlrecall` replaces
+> `shelfmark-rag`; the old `shelfmark-*` commands still work as aliases, and an
+> existing `~/.shelfmark` data dir is picked up automatically when
+> `~/.sqlrecall` does not exist.
 
 **[Why this exists](#why-this-exists)** · **[Quickstart](#quickstart)** ·
 **[MCP server](#mcp-server-agent-integration)** ·
@@ -26,11 +27,11 @@ desk.
 
 Agent harnesses accumulate knowledge: memory notes, ADRs, plans, standards,
 handoffs, and the code itself. The useful answer to most questions is already
-written down somewhere. shelfmark indexes all of it into one local SQLite file
+written down somewhere. sqlrecall indexes all of it into one local SQLite file
 and answers "what did we decide about X / where did we handle Y" in a single
 query, with `path:line` citations.
 
-shelfmark is the retrieval engine that came out of a year of running AI coding
+sqlrecall is the retrieval engine that came out of a year of running AI coding
 agents daily — most recently distilled from
 [forgekit](https://github.com/LucasSantana-Dev/forgekit), an AI dev toolkit for
 coding agents. Every design choice below was forced by a real failure mode in
@@ -58,10 +59,10 @@ Design choices that fell out of a year of measured iteration (see
 ## Quickstart
 
 ```bash
-pip install shelfmark-rag   # or: pipx install shelfmark-rag
+pip install sqlrecall   # or: pipx install sqlrecall
 
-shelfmark-build      # first run writes a starter ~/.shelfmark/sources.yaml — edit it, then rerun
-shelfmark-query "how do we handle retry timeouts"
+sqlrecall-build      # first run writes a starter ~/.sqlrecall/sources.yaml — edit it, then rerun
+sqlrecall-query "how do we handle retry timeouts"
 ```
 
 First build downloads `intfloat/multilingual-e5-small` (~120MB). Everything
@@ -71,11 +72,11 @@ after that runs offline.
 <summary>Prefer a local checkout instead? (contributing, editing the source)</summary>
 
 ```bash
-git clone https://github.com/LucasSantana-Dev/shelfmark && cd shelfmark
+git clone https://github.com/LucasSantana-Dev/sqlrecall && cd sqlrecall
 python3 -m venv venv && venv/bin/pip install -e .
 
-venv/bin/shelfmark-build
-venv/bin/shelfmark-query "how do we handle retry timeouts"
+venv/bin/sqlrecall-build
+venv/bin/sqlrecall-query "how do we handle retry timeouts"
 ```
 
 </details>
@@ -86,14 +87,14 @@ venv/bin/shelfmark-query "how do we handle retry timeouts"
 // e.g. Claude Code: .mcp.json or ~/.claude.json
 {
   "mcpServers": {
-    "shelfmark": {
-      "command": "shelfmark-mcp"
+    "sqlrecall": {
+      "command": "sqlrecall-mcp"
     }
   }
 }
 ```
 
-(Local checkout instead of `pipx install`? Use `"command": "/path/to/shelfmark/venv/bin/shelfmark-mcp"`.)
+(Local checkout instead of `pipx install`? Use `"command": "/path/to/sqlrecall/venv/bin/sqlrecall-mcp"`.)
 
 Two tools:
 
@@ -185,7 +186,7 @@ No cross-tool benchmark exists yet (see [Methodology & honest
 limitations](BENCHMARK.md#methodology--honest-limitations) — we'd genuinely
 like to see one run). Qualitative trade-offs, no fabricated numbers:
 
-| Option | When to pick shelfmark instead | Why |
+| Option | When to pick sqlrecall instead | Why |
 |---|---|---|
 | **mem0** (managed, cloud-first memory layer) | You want full local data ownership and cross-repo search | One SQLite file, zero setup, MCP native. mem0 adds a hosted service you may not need |
 | **Letta / MemGPT** (stateful agent framework) | You want a retriever, not a framework | Standalone tool that plugs into any MCP client; Letta expects you to adopt its agent runtime |
@@ -194,16 +195,16 @@ like to see one run). Qualitative trade-offs, no fabricated numbers:
 | **DIY LangChain + Chroma/Weaviate** | You want hybrid retrieval and an eval gate without wiring it yourself | Reranking, RRF fusion, and `eval/check.sh` regression gates ship in the box |
 | **Claude Code's built-in project memory** | You want hybrid (lexical + semantic) search across repos, not one workspace | File-based single-workspace memory has no ranking and no cross-repo scope |
 | **Chroma / Weaviate raw, or Pinecone** (no framework) | You want zero infrastructure to stand up | One SQLite file vs. a vector DB service + embedding pipeline + glue code |
-| **grep / ripgrep** | You need paraphrase recall, not just exact substrings | Lexical-only; shelfmark fuses BM25 with embeddings so "retry timeout" also matches "backoff on failure" |
+| **grep / ripgrep** | You need paraphrase recall, not just exact substrings | Lexical-only; sqlrecall fuses BM25 with embeddings so "retry timeout" also matches "backoff on failure" |
 
 Pick a hosted vector DB when you need multi-tenant scale across millions of
 documents — that's a different problem than agent recall over your own repos.
 
 Want to measure and improve retrieval ranking quality on your own pipeline,
 independent of any specific agent? [hitgate](https://github.com/LucasSantana-Dev/hitgate)
-provides label-free regression testing for hybrid retrievers. shelfmark and
+provides label-free regression testing for hybrid retrievers. sqlrecall and
 hitgate share a common hybrid-retrieval foundation (BM25 + embeddings + RRF)
-but serve complementary use cases: shelfmark for zero-setup agent memory with
+but serve complementary use cases: sqlrecall for zero-setup agent memory with
 MCP integration, hitgate for ranking evaluation and quality gates on any
 retriever you already have.
 
@@ -213,7 +214,7 @@ All optional — see `.env.example` for the full list. Highlights:
 
 | var | default | effect |
 |-----|---------|--------|
-| `RAG_HOME` | `~/.shelfmark` | data dir (index, sources.yaml) |
+| `RAG_HOME` | `~/.sqlrecall` | data dir (index, sources.yaml) |
 | `RAG_MODEL` / `RAG_DIM` | e5-small / 384 | embedding model |
 | `RAG_BM25_WEIGHT` | 1.5 | >1 favors lexical match |
 | `RAG_RERANK_AUTO` | on | rerank weak/ambiguous queries |
@@ -264,8 +265,8 @@ clients:
 To offboard a client, purge before removing it from `sources.yaml`:
 
 ```bash
-shelfmark-purge acme --lexicon acme-terms.txt                       # dry run: what would go
-shelfmark-purge acme --apply --archive age1... --lexicon acme-terms.txt
+sqlrecall-purge acme --lexicon acme-terms.txt                       # dry run: what would go
+sqlrecall-purge acme --apply --archive age1... --lexicon acme-terms.txt
 ```
 
 The purge streams the client's index, its backups and its query-log rows into
@@ -283,7 +284,7 @@ Source files are never touched.
 
 Issues and PRs welcome — especially a real cross-tool benchmark (see [How it
 compares](#how-it-compares)), support for more embedding models, or
-non-Claude MCP client examples. If shelfmark saves your agent a guess, a star
+non-Claude MCP client examples. If sqlrecall saves your agent a guess, a star
 helps others find it.
 
 ## License

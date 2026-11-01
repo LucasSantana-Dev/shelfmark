@@ -1,4 +1,4 @@
-# shelfmark — retrieval benchmark
+# sqlrecall — retrieval benchmark
 
 **Config:** `intfloat/multilingual-e5-small` (384d) + BM25 (code-aware tokenizer), RRF fusion, no reranker (`[FAST]` mode).
 **Corpus:** this repository itself — code + README indexed with `sources.yaml.example` semantics (~120 chunks).
@@ -8,7 +8,7 @@
 
 ```bash
 python3 -m venv venv && venv/bin/pip install -r requirements.txt
-mkdir -p ~/.shelfmark && printf 'repos:\n  - %s\n' "$(pwd)" > ~/.shelfmark/sources.yaml
+mkdir -p ~/.sqlrecall && printf 'repos:\n  - %s\n' "$(pwd)" > ~/.sqlrecall/sources.yaml
 venv/bin/python indexer.py
 RAG_QLOG=off venv/bin/python eval/run.py --dataset eval/dataset-public.jsonl --label train
 RAG_QLOG=off venv/bin/python eval/run.py --dataset eval/holdout-public.jsonl --label holdout
@@ -52,7 +52,7 @@ RAG_EVAL_BASELINE=eval/baseline-public-train.json \
 - **Holdout discipline.** The holdout split was frozen before any post-split
   tuning and is never used to pick parameters. If we ever tune against it, the
   numbers here stop being honest — `eval/holdout-policy.md` is the contract.
-- **No cross-tool comparison here.** This table measures shelfmark against
+- **No cross-tool comparison here.** This table measures sqlrecall against
   itself over time (regression gate), not against other retrieval tools. A
   fair cross-tool comparison needs identical corpora and query sets — if you
   run one, we'd genuinely like to see it.

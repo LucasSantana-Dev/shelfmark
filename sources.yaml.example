@@ -1,5 +1,5 @@
-# shelfmark corpus configuration.
-# Copy to $RAG_HOME/sources.yaml (default ~/.shelfmark/sources.yaml) and edit.
+# sqlrecall corpus configuration.
+# Copy to $RAG_HOME/sources.yaml (default ~/.sqlrecall/sources.yaml) and edit.
 # ~ and $VARS are expanded in every path.
 
 # Code repos: indexed for source code (py/ts/js/sh), docs/**/*.md, README.md,

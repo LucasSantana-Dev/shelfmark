@@ -3,9 +3,9 @@ requires = ["setuptools>=61,<82"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "shelfmark-rag"
-version = "1.1.0"
-description = "Local hybrid retrieval (BM25 + embeddings + RRF) for agent memory and codebases — one SQLite file, MCP server included."
+name = "sqlrecall"
+version = "1.2.0"
+description = "Agent memory and code recall in one SQLite file: hybrid BM25 + embeddings search, MCP server, no services. Formerly shelfmark."
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Lucas Santana" }]
@@ -31,11 +31,16 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/LucasSantana-Dev/shelfmark"
-Repository = "https://github.com/LucasSantana-Dev/shelfmark"
-Benchmark = "https://github.com/LucasSantana-Dev/shelfmark/blob/main/BENCHMARK.md"
+Homepage = "https://github.com/LucasSantana-Dev/sqlrecall"
+Repository = "https://github.com/LucasSantana-Dev/sqlrecall"
+Benchmark = "https://github.com/LucasSantana-Dev/sqlrecall/blob/main/BENCHMARK.md"
 
 [project.scripts]
+sqlrecall-build = "indexer:main"
+sqlrecall-query = "query:main"
+sqlrecall-mcp = "mcp_server:main"
+sqlrecall-purge = "purge:main"
+# Pre-rename command names, kept so existing MCP configs and hooks keep working.
 shelfmark-build = "indexer:main"
 shelfmark-query = "query:main"
 shelfmark-mcp = "mcp_server:main"

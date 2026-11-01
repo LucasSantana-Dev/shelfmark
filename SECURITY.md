@@ -14,7 +14,7 @@ Only the latest release (and `main`) receives security fixes.
 Please do **not** open a public issue for security problems. Instead, report
 privately via GitHub's private vulnerability reporting:
 
-**[Report a vulnerability](https://github.com/LucasSantana-Dev/shelfmark/security/advisories/new)**
+**[Report a vulnerability](https://github.com/LucasSantana-Dev/sqlrecall/security/advisories/new)**
 
 Include what you can: affected file/function, reproduction steps or PoC, and
 impact. You should get an initial response within 7 days. Once a fix ships,
@@ -22,7 +22,7 @@ the advisory is published and you are credited (unless you prefer not to be).
 
 ## Scope notes
 
-shelfmark is a local-first tool: it runs on your machine, indexes files you
+sqlrecall is a local-first tool: it runs on your machine, indexes files you
 point it at, and makes no network calls except the one-time embedding model
 download from Hugging Face. Things that are in scope:
 
@@ -33,5 +33,5 @@ download from Hugging Face. Things that are in scope:
 - Unsafe deserialization (index/cache loading)
 
 Out of scope: vulnerabilities in dependencies themselves (report upstream;
-a report here is still welcome if shelfmark uses the dependency unsafely),
+a report here is still welcome if sqlrecall uses the dependency unsafely),
 and issues requiring an already-compromised machine.

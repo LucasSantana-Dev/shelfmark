@@ -250,7 +250,7 @@ def main() -> int:
                 result={
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {}},
-                    "serverInfo": {"name": "shelfmark", "version": "0.1.0"},
+                    "serverInfo": {"name": "sqlrecall", "version": "0.1.0"},
                 },
             )
         elif method == "notifications/initialized":

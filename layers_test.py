@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
-TMP = Path(tempfile.mkdtemp(prefix="shelfmark-layers-")).resolve()
+TMP = Path(tempfile.mkdtemp(prefix="sqlrecall-layers-")).resolve()
 os.environ["RAG_HOME"] = str(TMP)
 os.environ["RAG_SOURCES"] = str(TMP / "sources.yaml")
 os.environ["RAG_SESSIONS_DIR"] = str(TMP / "sessions")

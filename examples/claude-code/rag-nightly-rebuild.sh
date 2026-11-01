@@ -3,11 +3,13 @@
 # Optional webhook alert on regression: set RAG_ALERT_WEBHOOK (Discord-style JSON embed).
 set -uo pipefail
 
-SHELFMARK_DIR="${SHELFMARK_DIR:-$HOME/shelfmark}"
-RAG_HOME="${RAG_HOME:-$HOME/.shelfmark}"
-PY="${SHELFMARK_PY:-$SHELFMARK_DIR/venv/bin/python3}"
+SQLRECALL_DIR="${SQLRECALL_DIR:-${SHELFMARK_DIR:-$HOME/sqlrecall}}"
+# Checkouts made before the rename live at ~/shelfmark.
+[ -d "$SQLRECALL_DIR" ] || [ ! -d "$HOME/shelfmark" ] || SQLRECALL_DIR="$HOME/shelfmark"
+RAG_HOME="${RAG_HOME:-$HOME/.sqlrecall}"
+PY="${SQLRECALL_PY:-${SHELFMARK_PY:-$SQLRECALL_DIR/venv/bin/python3}}"
 LOG="$RAG_HOME/nightly-rebuild.log"
-BASELINE="$SHELFMARK_DIR/eval/baseline-golden.json"
+BASELINE="$SQLRECALL_DIR/eval/baseline-golden.json"
 
 log() { echo "[$(date '+%Y-%m-%dT%H:%M:%S')] $*" | tee -a "$LOG"; }
 
@@ -24,9 +26,9 @@ notify() {
 log "=== nightly full rebuild start ==="
 
 # 1. Full rebuild (not incremental)
-if ! "$PY" "$SHELFMARK_DIR/indexer.py" >> "$LOG" 2>&1; then
+if ! "$PY" "$SQLRECALL_DIR/indexer.py" >> "$LOG" 2>&1; then
     log "ERROR: indexer.py exited non-zero"
-    notify "shelfmark rebuild FAILED" "indexer.py exited non-zero — check nightly-rebuild.log" "15158332"
+    notify "sqlrecall rebuild FAILED" "indexer.py exited non-zero — check nightly-rebuild.log" "15158332"
     exit 1
 fi
 log "indexer.py complete"
@@ -34,13 +36,13 @@ log "indexer.py complete"
 # 2. Eval gate (requires an eval dataset + frozen baseline for YOUR corpus)
 if [ -f "$BASELINE" ]; then
     LABEL="nightly-$(date '+%Y%m%d-%H%M')"
-    if ! RAG_QLOG=off "$SHELFMARK_DIR/eval/check.sh" "$LABEL" >> "$LOG" 2>&1; then
+    if ! RAG_QLOG=off "$SQLRECALL_DIR/eval/check.sh" "$LABEL" >> "$LOG" 2>&1; then
         log "REGRESSION: eval gate failed vs baseline-golden"
-        notify "shelfmark nightly: REGRESSION" "hit@5 regression vs baseline — check nightly-rebuild.log" "15158332"
+        notify "sqlrecall nightly: REGRESSION" "hit@5 regression vs baseline — check nightly-rebuild.log" "15158332"
         exit 1
     fi
     log "eval gate passed"
 fi
 
-notify "shelfmark nightly: OK" "Full rebuild complete." "3066993"
+notify "sqlrecall nightly: OK" "Full rebuild complete." "3066993"
 log "=== done ==="

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Purge one client's knowledge from every shelfmark surface.
+"""Purge one client's knowledge from every sqlrecall surface.
 
 Dry run by default: prints what would go. `--apply` does it, and needs either
 `--archive <age-recipient>` (the default path: nothing is lost by accident, the
@@ -35,9 +35,9 @@ A failure midway returns 1 with "partial"; re-running the same command
 finishes the job (every step is idempotent).
 
 Usage:
-  shelfmark-purge acme                                  # dry run
-  shelfmark-purge acme --lexicon acme-terms.txt         # dry run + canary scan
-  shelfmark-purge acme --apply --archive age1... --lexicon acme-terms.txt
+  sqlrecall-purge acme                                  # dry run
+  sqlrecall-purge acme --lexicon acme-terms.txt         # dry run + canary scan
+  sqlrecall-purge acme --apply --archive age1... --lexicon acme-terms.txt
 """
 from __future__ import annotations
 
@@ -166,7 +166,7 @@ def load_lexicon(path: Path) -> list[str]:
         t = line.strip()
         if t and not t.startswith("#"):
             if len(t) < 3:
-                raise SystemExit(f"shelfmark-purge: lexicon term {t!r} is too short to scan for (min 3 chars)")
+                raise SystemExit(f"sqlrecall-purge: lexicon term {t!r} is too short to scan for (min 3 chars)")
             terms.append(t.casefold())
     return terms
 
@@ -208,7 +208,7 @@ def scrub(db: Path, table: str, column: str, values: list) -> int:
 
 def archive(slug: str, recipient: str, files: list[Path], qlog_rowids: list[int]) -> Path:
     if not shutil.which("age"):
-        raise SystemExit("shelfmark-purge: `age` not found on PATH (needed for --archive; or pass --no-archive)")
+        raise SystemExit("sqlrecall-purge: `age` not found on PATH (needed for --archive; or pass --no-archive)")
     out_dir = ROOT / "archive"
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"client-{slug}-{int(time.time())}.tar.gz.age"
@@ -238,7 +238,7 @@ def archive(slug: str, recipient: str, files: list[Path], qlog_rowids: list[int]
             ok = False
     if proc.wait() != 0 or not ok or not out.exists() or out.stat().st_size == 0:
         out.unlink(missing_ok=True)
-        raise SystemExit("shelfmark-purge: age failed; nothing was deleted")
+        raise SystemExit("sqlrecall-purge: age failed; nothing was deleted")
     return out
 
 
@@ -283,11 +283,11 @@ def main(argv: list[str] | None = None) -> int:
 
     slug = args.client
     if slug not in CLIENTS:
-        raise SystemExit(f"shelfmark-purge: {slug!r} is not a configured client (purge runs before removing it from sources.yaml)")
+        raise SystemExit(f"sqlrecall-purge: {slug!r} is not a configured client (purge runs before removing it from sources.yaml)")
     if args.apply and not (args.archive or args.no_archive):
-        raise SystemExit("shelfmark-purge: --apply needs --archive <age-recipient> or an explicit --no-archive")
+        raise SystemExit("sqlrecall-purge: --apply needs --archive <age-recipient> or an explicit --no-archive")
     if args.archive and args.no_archive:
-        raise SystemExit("shelfmark-purge: --archive and --no-archive are exclusive")
+        raise SystemExit("sqlrecall-purge: --archive and --no-archive are exclusive")
     terms = load_lexicon(args.lexicon) if args.lexicon else []
 
     cdb = client_db(slug)
