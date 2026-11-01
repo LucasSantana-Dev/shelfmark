@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "sqlrecall-hook --agent codex --event session-start" }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "sqlrecall-hook --agent codex --event user-prompt" }] }],
+    "PostToolUse": [{ "hooks": [{ "type": "command", "command": "sqlrecall-hook --agent codex --event post-tool" }] }],
+    "PreCompact": [{ "hooks": [{ "type": "command", "command": "sqlrecall-hook --agent codex --event pre-compact" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "sqlrecall-hook --agent codex --event stop" }] }]
+  }
+}

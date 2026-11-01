@@ -109,6 +109,41 @@ Two tools:
 reindex + weekly report at session start, and a nightly rebuild with an eval
 regression gate.
 
+## Session capture and handoffs
+
+One command, called from each agent's lifecycle hooks, records what a session
+did and passes a baton to the next session in the same project, across
+harnesses (start in Claude Code, continue in Codex or OpenCode):
+
+```bash
+sqlrecall-hook --agent claude-code --event session-start   # reads the hook JSON on stdin
+```
+
+- **Capture.** Prompts, tool calls (name, target, pass/fail, short output) and
+  the last reply of each turn go to a SQLite store next to the index
+  (`index.memory.sqlite`, or `index.client-<slug>.memory.sqlite` under a
+  client's roots). Secret-shaped strings are redacted and bodies capped at
+  16 KiB before anything is written. A cwd under a purged client is never
+  captured. Zero LLM calls.
+- **Automatic handoff.** Every `stop` refreshes one open handoff per session:
+  last request, last reply, files edited, recent commands with failures.
+- **Delivery.** At `session-start` the newest open handoff from another session
+  in the project (worktrees count as their main checkout) is claimed once and
+  printed, fenced as untrusted data; Claude Code and Codex add that output to
+  the new session's context. Written handoffs win over automatic ones;
+  claiming an automatic one expires the older automatic ones. Open handoffs
+  expire after `SQLRECALL_HANDOFF_TTL_DAYS` (14).
+- **MCP tools.** `handoff_begin` (leave a written handoff), `handoff_list`,
+  `handoff_accept`. The layer always comes from the server process, never
+  from a tool argument.
+
+Adapters: `examples/claude-code/capture-hooks.json` (merge into
+`settings.json`), `examples/codex/hooks.json`, and
+`examples/opencode/sqlrecall.ts` (plugin, not yet run against a live
+OpenCode). `SQLRECALL_CAPTURE=off` disables capture;
+`SQLRECALL_HANDOFF_ON_START=off` keeps capture but skips delivery.
+`sqlrecall-purge <client>` drops the client's memory store with its index.
+
 ## What gets indexed
 
 `sources.yaml` declares everything (see `sources.yaml.example`):

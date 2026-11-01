@@ -17,7 +17,10 @@ What goes, in order:
      roots; scrubbed with secure_delete + WAL checkpoint + VACUUM
   5. the client's rows in the query log (by recorded client, cwd or top path)
      and the derived weekly.md report
-  6. verification: 0 residue rows, client files gone, and (with --lexicon) no
+  6. the client's capture/handoff store (index.client-<slug>.memory.sqlite)
+     goes with its index; sessions and handoffs recorded under its roots in
+     the general store (index.memory.sqlite) are scrubbed
+  7. verification: 0 residue rows, client files gone, and (with --lexicon) no
      lexicon term in the raw bytes of any remaining general/log file
 
 Notes indexed from inside the client's roots with `client: none` (harvested
@@ -49,9 +52,11 @@ import time
 from io import BytesIO
 from pathlib import Path
 
+from capture import memory_path
 from config import CLIENTS, CURATED_REPOS, DB, QLOG, ROOT, client_db, client_for_path
 
 BATCH = 500  # stay under SQLite's variable limit on old builds (999)
+GENERAL_MEMORY = memory_path(DB)
 
 
 def backups_of(db: Path) -> list[Path]:
@@ -118,6 +123,21 @@ def residue_paths(db: Path, slug: str) -> list[str]:
                 continue
         out.add(path)
     return sorted(out)
+
+
+def memory_rows(slug: str) -> tuple[list[str], list[str]]:
+    """(session ids, handoff ids) in the general capture store recorded under slug's roots."""
+    if not GENERAL_MEMORY.exists():
+        return [], []
+    conn = sqlite3.connect(GENERAL_MEMORY)
+    try:
+        sessions = [i for i, cwd in conn.execute("SELECT id, cwd FROM sessions") if client_for_path(cwd) == slug]
+        handoffs = [i for i, cwd in conn.execute("SELECT id, cwd FROM handoffs") if client_for_path(cwd) == slug]
+    except sqlite3.OperationalError:
+        return [], []
+    finally:
+        conn.close()
+    return sessions, handoffs
 
 
 def qlog_rows(slug: str) -> list[int]:
@@ -228,8 +248,15 @@ def unlink_all(paths: list[Path]) -> None:
             f.unlink(missing_ok=True)
 
 
-def apply(slug: str, client_files: list[Path], residue: dict[str, list[str]], qrows: list[int]) -> None:
+def apply(slug: str, client_files: list[Path], residue: dict[str, list[str]], qrows: list[int],
+          mem: tuple[list[str], list[str]] = ([], [])) -> None:
     unlink_all(client_files)
+    sessions, handoffs = mem
+    if sessions:
+        scrub(GENERAL_MEMORY, "observations", "session_id", sessions)
+        scrub(GENERAL_MEMORY, "sessions", "id", sessions)
+    if handoffs:
+        scrub(GENERAL_MEMORY, "handoffs", "id", handoffs)
     for db_path, paths in residue.items():
         db = Path(db_path)
         if db == DB:
@@ -264,18 +291,21 @@ def main(argv: list[str] | None = None) -> int:
     terms = load_lexicon(args.lexicon) if args.lexicon else []
 
     cdb = client_db(slug)
-    client_files = [f for f in [cdb, *backups_of(cdb), *corrupt_asides_of(cdb)] if f.exists()]
+    client_files = [f for f in [cdb, *backups_of(cdb), *corrupt_asides_of(cdb), memory_path(cdb)] if f.exists()]
     general_copies = [*backups_of(DB), *corrupt_asides_of(DB)]
     residue = {str(db): residue_paths(db, slug) for db in [DB, *backups_of(DB)]}
     residue = {k: v for k, v in residue.items() if v}
     qrows = qlog_rows(slug)
+    mem = memory_rows(slug)
 
     def kept_files() -> list[Path]:
-        return [*with_sidecars(DB), *backups_of(DB), *corrupt_asides_of(DB), *with_sidecars(QLOG), ROOT / "weekly.md"]
+        return [*with_sidecars(DB), *backups_of(DB), *corrupt_asides_of(DB), *with_sidecars(QLOG),
+                *with_sidecars(GENERAL_MEMORY), ROOT / "weekly.md"]
 
     print(f"client {slug}: {len(client_files)} index file(s), "
           f"{sum(len(v) for v in residue.values())} residue path(s) in general/backups, "
-          f"{len(qrows)} query-log row(s)")
+          f"{len(qrows)} query-log row(s), "
+          f"{len(mem[0])} captured session(s) + {len(mem[1])} handoff(s) in the general memory store")
     for f in client_files:
         print(f"  delete  {f}")
     for db, paths in residue.items():
@@ -303,7 +333,7 @@ def main(argv: list[str] | None = None) -> int:
         "archive": str(archived) if archived else None,
     }, indent=2))
     try:
-        apply(slug, client_files, residue, qrows)
+        apply(slug, client_files, residue, qrows, mem)
     except (sqlite3.Error, OSError, RuntimeError) as e:
         print(f"PARTIAL: {e}\nre-run the same command to finish (every step is idempotent)", file=sys.stderr)
         return 1
@@ -317,6 +347,8 @@ def main(argv: list[str] | None = None) -> int:
             problems.append(f"residue left in {db}: {len(left)} path(s)")
     if qlog_rows(slug):
         problems.append("query-log rows left")
+    if any(memory_rows(slug)):
+        problems.append("general memory store rows left")
     if terms:
         for f, found in scan(kept_files(), terms).items():
             problems.append(f"canary in {f}: {', '.join(found)}")

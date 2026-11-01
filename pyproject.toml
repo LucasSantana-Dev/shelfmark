@@ -40,6 +40,7 @@ sqlrecall-build = "indexer:main"
 sqlrecall-query = "query:main"
 sqlrecall-mcp = "mcp_server:main"
 sqlrecall-purge = "purge:main"
+sqlrecall-hook = "capture:main"
 # Pre-rename command names, kept so existing MCP configs and hooks keep working.
 shelfmark-build = "indexer:main"
 shelfmark-query = "query:main"
@@ -49,6 +50,7 @@ shelfmark-purge = "purge:main"
 [tool.setuptools]
 py-modules = [
     "indexer",
+    "capture",
     "chunkers",
     "config",
     "diff_pack",
