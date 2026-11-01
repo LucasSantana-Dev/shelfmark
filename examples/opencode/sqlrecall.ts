@@ -1,12 +1,12 @@
-// shelfmark capture + handoff plugin for OpenCode.
+// sqlrecall capture + handoff plugin for OpenCode.
 //
 // UNVERIFIED: written against the OpenCode plugin API (event, chat.message,
 // tool.execute.before/after, experimental.chat.system.transform) but not yet
 // run against a live OpenCode. Every call is best effort and never throws
 // into OpenCode.
 //
-// Install: copy to .opencode/plugin/shelfmark.ts (project) or
-// ~/.config/opencode/plugin/shelfmark.ts (global). Needs `shelfmark-hook` on PATH.
+// Install: copy to .opencode/plugin/sqlrecall.ts (project) or
+// ~/.config/opencode/plugin/sqlrecall.ts (global). Needs `sqlrecall-hook` on PATH.
 import { spawn } from "node:child_process"
 
 const AGENT = "opencode"
@@ -14,7 +14,7 @@ const AGENT = "opencode"
 function hook(event: string, payload: Record<string, unknown>): Promise<string> {
   return new Promise((resolve) => {
     try {
-      const child = spawn("shelfmark-hook", ["--agent", AGENT, "--event", event], {
+      const child = spawn("sqlrecall-hook", ["--agent", AGENT, "--event", event], {
         stdio: ["pipe", "pipe", "ignore"],
       })
       let out = ""
@@ -28,7 +28,7 @@ function hook(event: string, payload: Record<string, unknown>): Promise<string> 
   })
 }
 
-export const Shelfmark = async ({ directory }: { directory: string }) => {
+export const Sqlrecall = async ({ directory }: { directory: string }) => {
   const started = new Set<string>()
   const children = new Set<string>() // subagent sessions never claim a handoff
   const pending = new Map<string, string>() // sessionID -> handoff text to inject once

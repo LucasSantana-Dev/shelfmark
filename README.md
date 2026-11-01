@@ -116,7 +116,7 @@ did and passes a baton to the next session in the same project, across
 harnesses (start in Claude Code, continue in Codex or OpenCode):
 
 ```bash
-shelfmark-hook --agent claude-code --event session-start   # reads the hook JSON on stdin
+sqlrecall-hook --agent claude-code --event session-start   # reads the hook JSON on stdin
 ```
 
 - **Capture.** Prompts, tool calls (name, target, pass/fail, short output) and
@@ -132,17 +132,17 @@ shelfmark-hook --agent claude-code --event session-start   # reads the hook JSON
   printed, fenced as untrusted data; Claude Code and Codex add that output to
   the new session's context. Written handoffs win over automatic ones;
   claiming an automatic one expires the older automatic ones. Open handoffs
-  expire after `SHELFMARK_HANDOFF_TTL_DAYS` (14).
+  expire after `SQLRECALL_HANDOFF_TTL_DAYS` (14).
 - **MCP tools.** `handoff_begin` (leave a written handoff), `handoff_list`,
   `handoff_accept`. The layer always comes from the server process, never
   from a tool argument.
 
 Adapters: `examples/claude-code/capture-hooks.json` (merge into
 `settings.json`), `examples/codex/hooks.json`, and
-`examples/opencode/shelfmark.ts` (plugin, not yet run against a live
-OpenCode). `SHELFMARK_CAPTURE=off` disables capture;
-`SHELFMARK_HANDOFF_ON_START=off` keeps capture but skips delivery.
-`shelfmark-purge <client>` drops the client's memory store with its index.
+`examples/opencode/sqlrecall.ts` (plugin, not yet run against a live
+OpenCode). `SQLRECALL_CAPTURE=off` disables capture;
+`SQLRECALL_HANDOFF_ON_START=off` keeps capture but skips delivery.
+`sqlrecall-purge <client>` drops the client's memory store with its index.
 
 ## What gets indexed
 

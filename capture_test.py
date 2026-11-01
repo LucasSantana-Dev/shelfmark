@@ -13,7 +13,7 @@ import tempfile
 import textwrap
 from pathlib import Path
 
-TMP = Path(tempfile.mkdtemp(prefix="shelfmark-capture-")).resolve()
+TMP = Path(tempfile.mkdtemp(prefix="sqlrecall-capture-")).resolve()
 os.environ["RAG_HOME"] = str(TMP)
 os.environ["RAG_SOURCES"] = str(TMP / "sources.yaml")
 os.environ.pop("RAG_CLIENT", None)
@@ -106,7 +106,7 @@ def test_auto_handoff_claimed_once_by_another_session():
     assert len(rows(GENERAL, "SELECT id FROM handoffs WHERE from_session='A' AND state='open'")) == 1
     assert run("claude-code", "session-start", {"session_id": "A", "cwd": str(PROJ)}) == ""  # resume: no self-claim
     got = run("codex", "session-start", {"session_id": "B", "cwd": str(PROJ / "sub")})
-    assert got.startswith("<shelfmark-handoff") and 'from="claude-code"' in got, got
+    assert got.startswith("<sqlrecall-handoff") and 'from="claude-code"' in got, got
     for part in ("also update the docs", "src/login.ts", "FAILED npm test", "next run the e2e suite"):
         assert part in got, (part, got)
     assert run("opencode", "session-start", {"sessionID": "C", "directory": str(PROJ)}) == ""
@@ -114,10 +114,10 @@ def test_auto_handoff_claimed_once_by_another_session():
 
 
 def test_written_handoff_beats_auto_and_supersedes_older_auto():
-    os.environ["SHELFMARK_HANDOFF_ON_START"] = "off"  # E's own start would claim D otherwise
+    os.environ["SQLRECALL_HANDOFF_ON_START"] = "off"  # E's own start would claim D otherwise
     session("claude-code", "D", PROJ, prompt="older work")
     session("claude-code", "E", PROJ, prompt="newer work")
-    del os.environ["SHELFMARK_HANDOFF_ON_START"]
+    del os.environ["SQLRECALL_HANDOFF_ON_START"]
     con = capture.connect(GENERAL)
     try:
         capture.begin_handoff(con, str(PROJ), "codex", "mcp:1", "ship the release", "Tag v2 after CI is green.")
