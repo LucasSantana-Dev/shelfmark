@@ -40,10 +40,12 @@ shelfmark-build = "indexer:main"
 shelfmark-query = "query:main"
 shelfmark-mcp = "mcp_server:main"
 shelfmark-purge = "purge:main"
+shelfmark-hook = "capture:main"
 
 [tool.setuptools]
 py-modules = [
     "indexer",
+    "capture",
     "chunkers",
     "config",
     "diff_pack",

@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "shelfmark-hook --agent claude-code --event session-start" }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "shelfmark-hook --agent claude-code --event user-prompt" }] }],
+    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "shelfmark-hook --agent claude-code --event post-tool" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "shelfmark-hook --agent claude-code --event stop" }] }],
+    "PreCompact": [{ "hooks": [{ "type": "command", "command": "shelfmark-hook --agent claude-code --event pre-compact" }] }],
+    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "shelfmark-hook --agent claude-code --event session-end" }] }]
+  }
+}
