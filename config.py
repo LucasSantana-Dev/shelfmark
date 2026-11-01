@@ -1,9 +1,9 @@
-"""Central configuration for shelfmark.
+"""Central configuration for sqlrecall.
 
 Everything the engine needs to know about YOUR machine lives in two places:
 
 1. Environment variables (all optional):
-   RAG_HOME     data dir for index.sqlite etc.   (default: ~/.shelfmark)
+   RAG_HOME     data dir for index.sqlite etc.   (default: ~/.sqlrecall; ~/.shelfmark if only that exists)
    RAG_DB       explicit index path               (default: $RAG_HOME/index.sqlite)
    RAG_SOURCES  path to sources.yaml              (default: $RAG_HOME/sources.yaml)
    RAG_MODEL    sentence-transformers model name  (default: intfloat/multilingual-e5-small)
@@ -34,7 +34,13 @@ from pathlib import Path
 
 import yaml
 
-ROOT = Path(os.environ.get("RAG_HOME", "~/.shelfmark")).expanduser()
+def _default_root() -> Path:
+    """~/.sqlrecall, or ~/.shelfmark when only the pre-rename data dir exists."""
+    root, legacy = Path("~/.sqlrecall").expanduser(), Path("~/.shelfmark").expanduser()
+    return legacy if legacy.is_dir() and not root.exists() else root
+
+
+ROOT = Path(os.environ["RAG_HOME"]).expanduser() if os.environ.get("RAG_HOME") else _default_root()
 DB = Path(os.environ.get("RAG_DB") or ROOT / "index.sqlite")
 CLIENT_ENV = "RAG_CLIENT"
 QLOG = ROOT / "queries.sqlite"
@@ -46,7 +52,7 @@ SOURCES_FILE = Path(
 ).expanduser()
 
 _STARTER_SOURCES_YAML = """\
-# shelfmark corpus configuration.
+# sqlrecall corpus configuration.
 # Fill in what to index, then rerun. ~ and $VARS are expanded in every path.
 
 # Code repos: indexed for source code (py/ts/js/sh), docs/**/*.md, README.md,
@@ -78,7 +84,7 @@ clients: {}
 #     roots:
 #       - ~/dev/acme-app
 #       - ~/notes/acme
-#     db: ~/.shelfmark/index.client-acme.sqlite   # optional; this is the default
+#     db: ~/.sqlrecall/index.client-acme.sqlite   # optional; this is the default
 """
 
 
@@ -91,7 +97,7 @@ def _load_sources_file() -> dict:
         SOURCES_FILE.parent.mkdir(parents=True, exist_ok=True)
         SOURCES_FILE.write_text(_STARTER_SOURCES_YAML, encoding="utf-8")
         print(
-            f"shelfmark: no config found — wrote a starter one to {SOURCES_FILE}. "
+            f"sqlrecall: no config found — wrote a starter one to {SOURCES_FILE}. "
             "Add your repos/notes there, then rerun.",
             file=sys.stderr,
         )
@@ -99,11 +105,11 @@ def _load_sources_file() -> dict:
     try:
         data = yaml.safe_load(SOURCES_FILE.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
-        raise SystemExit(f"shelfmark: malformed {SOURCES_FILE}: {e}")
+        raise SystemExit(f"sqlrecall: malformed {SOURCES_FILE}: {e}")
     if data is None:
         return {}
     if not isinstance(data, dict):
-        raise SystemExit(f"shelfmark: {SOURCES_FILE} must be a YAML mapping")
+        raise SystemExit(f"sqlrecall: {SOURCES_FILE} must be a YAML mapping")
     return data
 
 
@@ -144,24 +150,24 @@ def _load_clients(raw: object) -> dict[str, dict]:
     if not raw:
         return {}
     if not isinstance(raw, dict):
-        raise SystemExit(f"shelfmark: 'clients' in {SOURCES_FILE} must be a mapping")
+        raise SystemExit(f"sqlrecall: 'clients' in {SOURCES_FILE} must be a mapping")
     out: dict[str, dict] = {}
     for slug, spec in raw.items():
         slug = str(slug)
         if not _SLUG_RE.match(slug) or slug == "none":
-            raise SystemExit(f"shelfmark: invalid client slug {slug!r} (use a-z, 0-9, '-'; 'none' is reserved)")
+            raise SystemExit(f"sqlrecall: invalid client slug {slug!r} (use a-z, 0-9, '-'; 'none' is reserved)")
         spec = spec if isinstance(spec, dict) else {}
         raw_roots = spec.get("roots") or []
         # A bare string would iterate per character and make "/" a root.
         if not isinstance(raw_roots, list) or not all(isinstance(r, str) for r in raw_roots):
-            raise SystemExit(f"shelfmark: clients.{slug}.roots must be a list of paths")
+            raise SystemExit(f"sqlrecall: clients.{slug}.roots must be a list of paths")
         roots = [Path(_expand(r)).resolve() for r in raw_roots]
         for root in roots:
             # A root that contains $HOME or RAG_HOME claims every note and session.
             if any(_within(guard, root) for guard in (Path.home().resolve(), ROOT.resolve())):
-                raise SystemExit(f"shelfmark: clients.{slug}.roots may not be {root} (contains $HOME or RAG_HOME)")
+                raise SystemExit(f"sqlrecall: clients.{slug}.roots may not be {root} (contains $HOME or RAG_HOME)")
             if not root.exists():
-                print(f"shelfmark: warning: clients.{slug} root does not exist: {root}", file=sys.stderr)
+                print(f"sqlrecall: warning: clients.{slug} root does not exist: {root}", file=sys.stderr)
         db = Path(_expand(spec["db"])) if spec.get("db") else ROOT / f"index.client-{slug}.sqlite"
         out[slug] = {"roots": roots, "db": db}
     # Two layers in one file would merge them silently.
@@ -169,7 +175,7 @@ def _load_clients(raw: object) -> dict[str, dict]:
     for slug, spec in out.items():
         key = _fold(str(spec["db"].resolve()))
         if key in seen:
-            raise SystemExit(f"shelfmark: clients.{slug}.db collides with {seen[key]}'s index ({spec['db']})")
+            raise SystemExit(f"sqlrecall: clients.{slug}.db collides with {seen[key]}'s index ({spec['db']})")
         seen[key] = slug
     return out
 
@@ -223,7 +229,7 @@ def active_client() -> str | None:
         if env not in CLIENTS:
             # Fail closed per query (ValueError, not SystemExit: a long-lived MCP
             # server must report the error, not die or fall back to general).
-            raise ValueError(f"shelfmark: {CLIENT_ENV}={env!r} is not a configured client")
+            raise ValueError(f"sqlrecall: {CLIENT_ENV}={env!r} is not a configured client")
         return env
     try:
         cwd = os.getcwd()

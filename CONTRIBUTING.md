@@ -1,4 +1,4 @@
-# Contributing to shelfmark
+# Contributing to sqlrecall
 
 Thanks for considering a contribution. Issues and PRs are welcome; the ones
 we want most right now:
@@ -12,12 +12,12 @@ we want most right now:
 ## Dev setup
 
 ```bash
-git clone https://github.com/LucasSantana-Dev/shelfmark && cd shelfmark
+git clone https://github.com/LucasSantana-Dev/sqlrecall && cd sqlrecall
 python3 -m venv venv && venv/bin/pip install -e .
 
 cp sources.yaml.example sources.yaml   # works as-is: indexes this repo
-venv/bin/shelfmark-build
-venv/bin/shelfmark-query "how does rerank policy work"
+venv/bin/sqlrecall-build
+venv/bin/sqlrecall-query "how does rerank policy work"
 ```
 
 First build downloads `intfloat/multilingual-e5-small` (~120MB); everything

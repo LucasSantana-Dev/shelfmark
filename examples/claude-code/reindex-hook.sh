@@ -8,9 +8,11 @@
 #   "hooks": { "PostToolUse": [ { "matcher": "Write|Edit", "hooks": [ { "type":
 #     "command", "command": "bash /path/to/reindex-hook.sh" } ] } ] }
 set -u
-SHELFMARK_DIR="${SHELFMARK_DIR:-$HOME/shelfmark}"
-RAG_PY="${SHELFMARK_PY:-$SHELFMARK_DIR/venv/bin/python}"
-LOG="${RAG_HOME:-$HOME/.shelfmark}/hook.log"
+SQLRECALL_DIR="${SQLRECALL_DIR:-${SHELFMARK_DIR:-$HOME/sqlrecall}}"
+# Checkouts made before the rename live at ~/shelfmark.
+[ -d "$SQLRECALL_DIR" ] || [ ! -d "$HOME/shelfmark" ] || SQLRECALL_DIR="$HOME/shelfmark"
+RAG_PY="${SQLRECALL_PY:-${SHELFMARK_PY:-$SQLRECALL_DIR/venv/bin/python}}"
+LOG="${RAG_HOME:-$HOME/.sqlrecall}/hook.log"
 # Cap the log so per-reindex model-load output can't grow it unbounded.
 [ -f "$LOG" ] && [ "$(wc -l < "$LOG" 2>/dev/null || echo 0)" -gt 2000 ] && { tail -n 500 "$LOG" > "$LOG.tmp" 2>/dev/null && mv "$LOG.tmp" "$LOG"; }
 INPUT=$(cat 2>/dev/null || true)
@@ -32,7 +34,7 @@ case "$FILE" in
   "$HOME"/notes/plans/*.md|\
   "$HOME"/notes/standards/*.md)
     TRANSFORMERS_VERBOSITY=error HF_HUB_VERBOSITY=error \
-    "$RAG_PY" "$SHELFMARK_DIR/indexer.py" --incremental "$FILE" \
+    "$RAG_PY" "$SQLRECALL_DIR/indexer.py" --incremental "$FILE" \
       >>"$LOG" 2>&1 &
     ;;
 esac

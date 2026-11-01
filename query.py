@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Query the shelfmark index with hybrid BM25 + cosine retrieval.
+"""Query the sqlrecall index with hybrid BM25 + cosine retrieval.
 
 Auto-scopes to the current repo when invoked from inside a configured repo,
 unless `--scope-repo all` is passed. `--scope` still filters by source_type.

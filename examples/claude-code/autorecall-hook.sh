@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UserPromptSubmit hook: inject top shelfmark hits for the user's prompt.
+# UserPromptSubmit hook: inject top sqlrecall hits for the user's prompt.
 # Silent on low-confidence / short / long prompts. Never blocks.
 #
 # Install (~/.claude/settings.json):
@@ -7,8 +7,8 @@
 #     "command": "bash /path/to/autorecall-hook.sh" } ] } ] }
 #
 # Env dials:
-#   SHELFMARK_DIR                 → repo checkout (default ~/shelfmark)
-#   SHELFMARK_PY                  → python with deps (default $SHELFMARK_DIR/venv/bin/python)
+#   SQLRECALL_DIR                 → repo checkout (default ~/sqlrecall)
+#   SQLRECALL_PY                  → python with deps (default $SQLRECALL_DIR/venv/bin/python)
 #   CLAUDE_RAG_AUTORECALL=off     → disabled entirely
 #   CLAUDE_RAG_AUTORECALL=quiet   → cosine threshold 0.55 (default)
 #   CLAUDE_RAG_AUTORECALL=loud    → cosine threshold 0.40
@@ -19,11 +19,13 @@ export TRANSFORMERS_OFFLINE=1
 
 # Fail-fast: if the engine moved or is broken, exit immediately (one stderr
 # line) instead of failing inside the hook timeout on every prompt.
-SHELFMARK_DIR="${SHELFMARK_DIR:-$HOME/shelfmark}"
-RAG_PY="${SHELFMARK_PY:-$SHELFMARK_DIR/venv/bin/python}"
-RAG_QUERY="$SHELFMARK_DIR/query.py"
+SQLRECALL_DIR="${SQLRECALL_DIR:-${SHELFMARK_DIR:-$HOME/sqlrecall}}"
+# Checkouts made before the rename live at ~/shelfmark.
+[ -d "$SQLRECALL_DIR" ] || [ ! -d "$HOME/shelfmark" ] || SQLRECALL_DIR="$HOME/shelfmark"
+RAG_PY="${SQLRECALL_PY:-${SHELFMARK_PY:-$SQLRECALL_DIR/venv/bin/python}}"
+RAG_QUERY="$SQLRECALL_DIR/query.py"
 if [ ! -x "$RAG_PY" ] || [ ! -f "$RAG_QUERY" ]; then
-  echo "autorecall: shelfmark not found at $SHELFMARK_DIR (moved?) — skipping recall" >&2
+  echo "autorecall: sqlrecall not found at $SQLRECALL_DIR (moved?) — skipping recall" >&2
   exit 0
 fi
 
